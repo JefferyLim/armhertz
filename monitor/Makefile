@@ -1,6 +1,6 @@
 # Define the compiler and the flags
 CC = g++
-CFLAGS = -Wall -g
+CFLAGS = -Wall -g -O3
 
 # Define the source file and the output file
 SRC = monitor.c
