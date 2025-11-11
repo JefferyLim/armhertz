@@ -223,7 +223,6 @@ int main() {
     ret = gencmd(mb, "measure_temp", result, sizeof result);
     double core_clk = get_vcgencmd_value(result);
 
-
     ret = gencmd(mb, "measure_volts", result, sizeof result);
     double core_volt = get_vcgencmd_value(result);
 
