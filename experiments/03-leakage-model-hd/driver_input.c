@@ -37,7 +37,7 @@ static __attribute__((noinline)) int victim(void *varg)
 	uint64_t left = my_uint64 >> count;
 	uint64_t right = my_uint64 << count;
 
-	asm volatile(
+/* 	asm volatile(
 		".align 64\t\n"
 		"loop:\n\t"
 
@@ -67,6 +67,36 @@ static __attribute__((noinline)) int victim(void *varg)
 		:
 		: "r"(count), "r"(left), "r"(right)
 		: "rbx", "rcx", "rsi", "rdi", "r8", "r9", "r10", "r11", "r12", "r13");
+ */
+ 
+     asm volatile(
+        ".align 64\n\t"
+        "loop:\n\t"
+
+        "lsl x0, x1, x0\n\t"   // Logical shift left: x0 = left << x1
+        "lsl x0, x1, x2\n\t"   // Logical shift left: x0 = left << x2
+        "lsr x0, x2, x3\n\t"   // Logical shift right: x0 = right >> x2
+        "lsr x0, x2, x4\n\t"   // Logical shift right: x0 = right >> x4
+        "lsl x0, x1, x5\n\t"   // Logical shift left: x0 = left << x5
+        "lsl x0, x1, x6\n\t"   // Logical shift left: x0 = left << x6
+        "lsr x0, x2, x7\n\t"   // Logical shift right: x0 = right >> x7
+        "lsr x0, x2, x8\n\t"   // Logical shift right: x0 = right >> x8
+        "lsl x0, x1, x9\n\t"   // Logical shift left: x0 = left << x9
+        "lsl x0, x1, x10\n\t"  // Logical shift left: x0 = left << x10
+        "lsl x0, x1, x11\n\t"  // Logical shift left: x0 = left << x11
+        "lsl x0, x1, x12\n\t"  // Logical shift left: x0 = left << x12
+
+        "lsr x0, x2, x13\n\t"  // Logical shift right: x0 = right >> x13
+        "lsr x0, x2, x14\n\t"  // Logical shift right: x0 = right >> x14
+        "lsl x0, x1, x15\n\t"  // Logical shift left: x0 = left << x15
+        "lsl x0, x1, x16\n\t"  // Logical shift left: x0 = left << x16
+
+        "b loop\n\t"            // Branch to loop (equivalent to jmp loop)
+
+        :                       // No output operands
+        : "r"(count), "r"(left), "r"(right)   // Input operands
+        : "x0", "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10", "x11", "x12", "x13", "x14", "x15"  // Clobbered registers
+    );
 
 	return 0;
 }

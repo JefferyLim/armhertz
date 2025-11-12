@@ -61,7 +61,7 @@ static __attribute__((noinline)) int victim(void *varg)
 							(operand_small[1] << 8) |
 							(operand_small[0] << 0);
 
-	asm volatile(
+/* 	asm volatile(
 		"mov %0,%%rbx\n\t" // set register to operand
 		"mov %0,%%rcx\n\t" // set register to operand
 		"mov %0,%%rdx\n\t" // set register to operand
@@ -111,6 +111,66 @@ static __attribute__((noinline)) int victim(void *varg)
 		:
 		: "r"(full_operand)
 		: "rbx", "rcx", "rdx", "rsi", "rdi", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15");
+ */
+ 
+     asm volatile(
+        "mov x1, %0\n\t"  // Set x1 to full_operand
+        "mov x2, %0\n\t"  // Set x2 to full_operand
+        "mov x3, %0\n\t"  // Set x3 to full_operand
+        "mov x4, %0\n\t"  // Set x4 to full_operand
+        "mov x5, %0\n\t"  // Set x5 to full_operand
+        "mov x6, %0\n\t"  // Set x6 to full_operand
+        "mov x7, %0\n\t"  // Set x7 to full_operand
+        "mov x8, %0\n\t"  // Set x8 to full_operand
+        "mov x9, %0\n\t"  // Set x9 to full_operand
+        "mov x10, %0\n\t" // Set x10 to full_operand
+        "mov x11, %0\n\t" // Set x11 to full_operand
+        "mov x12, %0\n\t" // Set x12 to full_operand
+        "mov x13, %0\n\t" // Set x13 to full_operand
+        "mov x14, %0\n\t" // Set x14 to full_operand
+        "mov x15, %0\n\t" // Set x15 to full_operand
+
+        ".align 64\n\t"
+        "loop:\n\t"
+
+        "orr x1, x1, %0\n\t"  // OR x1 with full_operand
+        "orr x2, x2, %0\n\t"  // OR x2 with full_operand
+        "orr x3, x3, %0\n\t"  // OR x3 with full_operand
+        "orr x4, x4, %0\n\t"  // OR x4 with full_operand
+        "orr x5, x5, %0\n\t"  // OR x5 with full_operand
+        "orr x6, x6, %0\n\t"  // OR x6 with full_operand
+        "orr x7, x7, %0\n\t"  // OR x7 with full_operand
+        "orr x8, x8, %0\n\t"  // OR x8 with full_operand
+        "orr x9, x9, %0\n\t"  // OR x9 with full_operand
+        "orr x10, x10, %0\n\t" // OR x10 with full_operand
+        "orr x11, x11, %0\n\t" // OR x11 with full_operand
+        "orr x12, x12, %0\n\t" // OR x12 with full_operand
+        "orr x13, x13, %0\n\t" // OR x13 with full_operand
+        "orr x14, x14, %0\n\t" // OR x14 with full_operand
+        "orr x15, x15, %0\n\t" // OR x15 with full_operand
+
+        "orr x1, x1, %0\n\t"  // OR x1 again with full_operand
+        "orr x2, x2, %0\n\t"  // OR x2 again with full_operand
+        "orr x3, x3, %0\n\t"  // OR x3 again with full_operand
+        "orr x4, x4, %0\n\t"  // OR x4 again with full_operand
+        "orr x5, x5, %0\n\t"  // OR x5 again with full_operand
+        "orr x6, x6, %0\n\t"  // OR x6 again with full_operand
+        "orr x7, x7, %0\n\t"  // OR x7 again with full_operand
+        "orr x8, x8, %0\n\t"  // OR x8 again with full_operand
+        "orr x9, x9, %0\n\t"  // OR x9 again with full_operand
+        "orr x10, x10, %0\n\t" // OR x10 again with full_operand
+        "orr x11, x11, %0\n\t" // OR x11 again with full_operand
+        "orr x12, x12, %0\n\t" // OR x12 again with full_operand
+        "orr x13, x13, %0\n\t" // OR x13 again with full_operand
+        "orr x14, x14, %0\n\t" // OR x14 again with full_operand
+        "orr x15, x15, %0\n\t" // OR x15 again with full_operand
+
+        "b loop\n\t"           // Branch back to loop (equivalent to jmp loop in x86-64)
+
+        :                     // No outputs
+        : "r"(full_operand)   // Input operand (full_operand)
+        : "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10", "x11", "x12", "x13", "x14", "x15" // Clobbered registers
+    );
 
 	return 0;
 }

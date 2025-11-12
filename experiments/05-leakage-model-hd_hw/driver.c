@@ -61,7 +61,7 @@ static __attribute__((noinline)) int victim(void *varg)
 	first = first << curr_shift_first;
 	second = second << curr_shift_second;
 
-	asm volatile(
+/* 	asm volatile(
 		"mov %0,%%r8\n\t"  // set register to operand
 		"mov %0,%%r9\n\t"  // set register to operand
 		"mov %0,%%r10\n\t" // set register to operand
@@ -86,8 +86,34 @@ static __attribute__((noinline)) int victim(void *varg)
 		"jmp loop\n\t"
 		:
 		: "r"(first), "r"(second)
-		: "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15");
+		: "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"); */
+        
+    asm volatile(
+        "mov x8, %0\n\t"  // Set register x8 to first operand
+        "mov x9, %0\n\t"  // Set register x9 to first operand
+        "mov x10, %0\n\t" // Set register x10 to first operand
+        "mov x11, %0\n\t" // Set register x11 to first operand
+        "mov x12, %1\n\t" // Set register x12 to second operand
+        "mov x13, %1\n\t" // Set register x13 to second operand
+        "mov x14, %1\n\t" // Set register x14 to second operand
+        "mov x15, %1\n\t" // Set register x15 to second operand
 
+        ".align 64\n\t"
+        "loop:\n\t"
+
+        "orr x8, x8, %0\n\t"   // OR first operand with x8
+        "orr x9, x9, %0\n\t"   // OR first operand with x9
+        "orr x10, x10, %0\n\t" // OR first operand with x10
+        "orr x11, x11, %0\n\t" // OR first operand with x11
+        "orr x12, x12, %1\n\t" // OR second operand with x12
+        "orr x13, x13, %1\n\t" // OR second operand with x13
+        "orr x14, x14, %1\n\t" // OR second operand with x14
+        "orr x15, x15, %1\n\t" // OR second operand with x15
+
+        "b loop\n\t"           // Branch to loop (equivalent to 'jmp loop' in x86-64)
+        :
+        : "r"(first), "r"(second)
+        : "x8", "x9", "x10", "x11", "x12", "x13", "x14", "x15");
 	return 0;
 }
 

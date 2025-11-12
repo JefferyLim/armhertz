@@ -104,7 +104,7 @@ static __attribute__((noinline)) int victim(void *varg)
 		second = first;
 	}
 
-	asm volatile(
+/* 	asm volatile(
 		"mov %0,%%rbx\n\t" // set register to operand
 		"mov %0,%%rcx\n\t" // set register to operand
 		"mov %0,%%rdx\n\t" // set register to operand
@@ -153,7 +153,65 @@ static __attribute__((noinline)) int victim(void *varg)
 		"jmp loop\n\t"
 		:
 		: "r"(first), "r"(second)
-		: "rbx", "rcx", "rdx", "rsi", "rdi", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15");
+		: "rbx", "rcx", "rdx", "rsi", "rdi", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"); */
+    asm volatile(
+        "mov x1, %0\n\t"  // Set x1 to first operand
+        "mov x2, %0\n\t"  // Set x2 to first operand
+        "mov x3, %0\n\t"  // Set x3 to first operand
+        "mov x4, %0\n\t"  // Set x4 to first operand
+        "mov x5, %0\n\t"  // Set x5 to first operand
+        "mov x6, %0\n\t"  // Set x6 to first operand
+        "mov x7, %0\n\t"  // Set x7 to first operand
+        "mov x8, %0\n\t"  // Set x8 to first operand
+        "mov x9, %0\n\t"  // Set x9 to first operand
+        "mov x10, %0\n\t" // Set x10 to first operand
+        "mov x11, %0\n\t" // Set x11 to first operand
+        "mov x12, %0\n\t" // Set x12 to first operand
+        "mov x13, %0\n\t" // Set x13 to first operand
+        "mov x14, %0\n\t" // Set x14 to first operand
+        "mov x15, %0\n\t" // Set x15 to first operand
+
+        ".align 64\n\t"
+        "loop:\n\t"
+
+        "orr x1, x1, %1\n\t"  // OR x1 with second operand
+        "orr x2, x2, %1\n\t"  // OR x2 with second operand
+        "orr x3, x3, %1\n\t"  // OR x3 with second operand
+        "orr x4, x4, %1\n\t"  // OR x4 with second operand
+        "orr x5, x5, %1\n\t"  // OR x5 with second operand
+        "orr x6, x6, %1\n\t"  // OR x6 with second operand
+        "orr x7, x7, %1\n\t"  // OR x7 with second operand
+        "orr x8, x8, %1\n\t"  // OR x8 with second operand
+        "orr x9, x9, %1\n\t"  // OR x9 with second operand
+        "orr x10, x10, %1\n\t" // OR x10 with second operand
+        "orr x11, x11, %1\n\t" // OR x11 with second operand
+        "orr x12, x12, %1\n\t" // OR x12 with second operand
+        "orr x13, x13, %1\n\t" // OR x13 with second operand
+        "orr x14, x14, %1\n\t" // OR x14 with second operand
+        "orr x15, x15, %1\n\t" // OR x15 with second operand
+
+        "orr x1, x1, %1\n\t"  // OR x1 again with second operand
+        "orr x2, x2, %1\n\t"  // OR x2 again with second operand
+        "orr x3, x3, %1\n\t"  // OR x3 again with second operand
+        "orr x4, x4, %1\n\t"  // OR x4 again with second operand
+        "orr x5, x5, %1\n\t"  // OR x5 again with second operand
+        "orr x6, x6, %1\n\t"  // OR x6 again with second operand
+        "orr x7, x7, %1\n\t"  // OR x7 again with second operand
+        "orr x8, x8, %1\n\t"  // OR x8 again with second operand
+        "orr x9, x9, %1\n\t"  // OR x9 again with second operand
+        "orr x10, x10, %1\n\t" // OR x10 again with second operand
+        "orr x11, x11, %1\n\t" // OR x11 again with second operand
+        "orr x12, x12, %1\n\t" // OR x12 again with second operand
+        "orr x13, x13, %1\n\t" // OR x13 again with second operand
+        "orr x14, x14, %1\n\t" // OR x14 again with second operand
+        "orr x15, x15, %1\n\t" // OR x15 again with second operand
+
+        "b loop\n\t"           // Branch to loop (equivalent to jmp loop)
+
+        :                      // No output operands
+        : "r"(first), "r"(second)  // Input operands (first and second)
+        : "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10", "x11", "x12", "x13", "x14", "x15"  // Clobbered registers
+    );
 
 	return 0;
 }

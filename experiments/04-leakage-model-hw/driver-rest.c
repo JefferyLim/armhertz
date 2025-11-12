@@ -50,7 +50,7 @@ static __attribute__((noinline)) int victim(void *varg)
 	// uint64_t mask = 0x8080808080808080;
 	// operand = operand | mask;
 
-	asm volatile(
+/* 	asm volatile(
 		"mov $1,%%rbx\n\t" // set register to operand
 
 		".rept 100\n\t"
@@ -92,8 +92,56 @@ static __attribute__((noinline)) int victim(void *varg)
 
 		: "=m"(output)
 		: "r"(operand)
-		: "rbx", "rcx", "rdx", "rsi", "rdi", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15");
+		: "rbx", "rcx", "rdx", "rsi", "rdi", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"); */
+        
+    asm volatile(
+        "mov x1, #1\n\t"  // Set register x1 to 1
 
+        ".rept 100\n\t"
+        "mov x2, %1\n\t"  // Set x2 to operand
+        "mov x3, %1\n\t"  // Set x3 to operand
+        "mov x4, %1\n\t"  // Set x4 to operand
+        "mov x5, %1\n\t"  // Set x5 to operand
+        "mov x6, %1\n\t"  // Set x6 to operand
+        "mov x7, %1\n\t"  // Set x7 to operand
+        "mov x8, %1\n\t"  // Set x8 to operand
+        "mov x9, %1\n\t"  // Set x9 to operand
+        "mov x10, %1\n\t" // Set x10 to operand
+        "mov x11, %1\n\t" // Set x11 to operand
+        "mov x12, %1\n\t" // Set x12 to operand
+        "mov x13, %1\n\t" // Set x13 to operand
+        "mov x14, %1\n\t" // Set x14 to operand
+        "mov x15, %1\n\t" // Set x15 to operand
+        ".endr\n\t"
+
+        ".align 64\n\t"
+        "loop:\n\t"
+
+        ".rept 100\n\t"
+        "mov %0, x1\n\t"  // Move value in x1 to output (same as 'mov %%rbx, %0' in x86)
+        ".endr\n\t"
+
+        "b loop\n\t"       // Branch to loop (equivalent to 'jmp loop')
+
+        "mov %0, x2\n\t"   // Move x2 to output
+        "mov %0, x3\n\t"   // Move x3 to output
+        "mov %0, x4\n\t"   // Move x4 to output
+        "mov %0, x5\n\t"   // Move x5 to output
+        "mov %0, x6\n\t"   // Move x6 to output
+        "mov %0, x7\n\t"   // Move x7 to output
+        "mov %0, x8\n\t"   // Move x8 to output
+        "mov %0, x9\n\t"   // Move x9 to output
+        "mov %0, x10\n\t"  // Move x10 to output
+        "mov %0, x11\n\t"  // Move x11 to output
+        "mov %0, x12\n\t"  // Move x12 to output
+        "mov %0, x13\n\t"  // Move x13 to output
+        "mov %0, x14\n\t"  // Move x14 to output
+        "mov %0, x15\n\t"  // Move x15 to output
+
+        : "=m"(output)     // Output operand
+        : "r"(operand)     // Input operand
+        : "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10", "x11", "x12", "x13", "x14", "x15" // Clobbered registers
+);
 	return 0;
 }
 
