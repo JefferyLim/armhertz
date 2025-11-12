@@ -184,6 +184,8 @@ static __attribute__((noinline)) int monitor(void *in)
 
 	// Pin monitor to a single CPU
 	pin_to_core(attacker_core_ID);
+    int mb = mbox_open();
+
 
 	// Set filename
 	// The format is, e.g., ./out/all_02_2330.out

@@ -1,10 +1,23 @@
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <sched.h>
+#include <inttypes.h>
+#include <unistd.h>
+#include <sys/mman.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <sys/resource.h>
 #include <sys/syscall.h>
 #include <sys/wait.h>
-
-#include "../util/freq-utils.h"
-#include "../util/rapl-utils.h"
-#include "../util/util.h"
+#include <signal.h>
+#include <time.h>
+#include <math.h>
+#include <sys/resource.h>
+#include <pthread.h>
+#include <string.h>
+#include "../../util/util.h"
 
 volatile static int attacker_core_ID;
 
@@ -66,6 +79,7 @@ static __attribute__((noinline)) int monitor(void *in)
 
 	// Pin monitor to a single CPU
 	pin_cpu(attacker_core_ID);
+    int mb = mbox_open();
 
 	// Set filename
 	// The format is, e.g., ./out/all_02_2330.out

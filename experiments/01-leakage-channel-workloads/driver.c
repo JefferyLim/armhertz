@@ -10,6 +10,7 @@
 #include <sys/wait.h>
 #include <sys/resource.h>
 #include <sys/syscall.h>
+#include <sys/wait.h>
 #include <signal.h>
 #include <time.h>
 #include <math.h>
@@ -40,10 +41,10 @@ static __attribute__((noinline)) int monitor(void *in)
 
 	struct args_t *arg = (struct args_t *)in;
 
-	int mb = mbox_open();
 	// Pin monitor to a single CPU
 	pin_to_core(attacker_core_ID);
-
+    int mb = mbox_open();
+    
 	// Set filename
 	char energy_filename[64];
 	sprintf(energy_filename, "./out/energy_%s_%06d.out", arg->selector, rept_index);
@@ -62,32 +63,32 @@ static __attribute__((noinline)) int monitor(void *in)
 	}
     	
 	// Prepare
-    	uint64_t start_cc = read_pmccntr_el0();
-    	uint64_t start_vc = read_cntvct_el0();
-    	uint64_t prev_cc = start_cc;
-    	uint64_t prev_vc = start_vc;
-    	uint64_t cntfrq = read_cntfrq_el0();
-	double energy = read_power(mb);
-	double prev_energy = energy;
+    uint64_t start_cc = read_pmccntr_el0();
+    uint64_t start_vc = read_cntvct_el0();
+    uint64_t prev_cc = start_cc;
+    uint64_t prev_vc = start_vc;
+    uint64_t cntfrq = read_cntfrq_el0();
+    double energy = read_power(mb);
+    double prev_energy = energy;
 	
-	
-    	// Collect measurements
-    	for (uint64_t i = 0; i < arg->iters; i++) {
-		struct timespec ts = {0, TIME_BETWEEN_MEASUREMENTS};
-        	// Wait before next measurement
-        	nanosleep(&ts, NULL);
+    struct timespec ts = {0, TIME_BETWEEN_MEASUREMENTS};
 
-        	// Collect measurementi
+    // Collect measurements
+    for (uint64_t i = 0; i < arg->iters; i++) {
+        // Wait before next measurement
+        nanosleep(&ts, NULL);
+
+        // Collect measurementi
 		start_cc = read_pmccntr_el0();
 		start_vc = read_cntvct_el0();
 
 		energy = read_power(mb);
 
 		// Store measurement
-	        uint64_t cc_delta = start_cc - prev_cc;
-        	uint64_t vc_delta = start_vc - prev_vc;
-	        double hz =((double) cc_delta / (double) vc_delta * (double) cntfrq);
-        	fprintf(freq_file, "%.15f\n", hz);
+        uint64_t cc_delta = start_cc - prev_cc;
+        uint64_t vc_delta = start_vc - prev_vc;
+        double hz =((double) cc_delta / (double) vc_delta * (double) cntfrq);
+        fprintf(freq_file, "%.15f\n", hz);
 	
 		// We only have the currrent power consumption, not total	
 		fprintf(energy_file, "%.15f\n", energy);
