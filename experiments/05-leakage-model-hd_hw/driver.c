@@ -167,7 +167,7 @@ static __attribute__((noinline)) int monitor(void *in)
         uint64_t cc_delta = start_cc - prev_cc;
         uint64_t vc_delta = start_vc - prev_vc;
         double hz =((double) cc_delta / (double) vc_delta * (double) cntfrq);
-        fprintf(freq_file, "%.15f %.15f\n", energy, hz);
+        fprintf(output_file, "%.15f %.15f\n", energy, hz);
 	
 		// We only have the currrent power consumption, not total	
 

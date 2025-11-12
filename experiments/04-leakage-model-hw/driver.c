@@ -224,7 +224,7 @@ static __attribute__((noinline)) int monitor(void *in)
 	struct args_t *arg = (struct args_t *)in;
 
 	// Pin monitor to a single CPU
-	pin_cpu(attacker_core_ID);
+	pin_to_core(attacker_core_ID);
     int mb = mbox_open();
 
 	// Set filename
@@ -269,7 +269,7 @@ static __attribute__((noinline)) int monitor(void *in)
         	
 	
 		// We only have the currrent power consumption, not total
-		fprintf(output_file, "%.15f %.15f\n", energy, khz);	
+		fprintf(output_file, "%.15f %.15f\n", energy, hz);	
 
         // Save current
 		prev_cc = start_cc;

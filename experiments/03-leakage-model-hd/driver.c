@@ -95,28 +95,38 @@ static __attribute__((noinline)) int monitor(void *in)
 	}
 
 	// Prepare
-	double energy, prev_energy = rapl_msr(attacker_core_ID, PP0_ENERGY);
-	struct freq_sample_t freq_sample, prev_freq_sample = frequency_msr_raw(attacker_core_ID);
+    uint64_t start_cc = read_pmccntr_el0();
+    uint64_t start_vc = read_cntvct_el0();
+    uint64_t prev_cc = start_cc;
+    uint64_t prev_vc = start_vc;
+    uint64_t cntfrq = read_cntfrq_el0();
+    double energy = read_power(mb);
+    double prev_energy = energy;
+	
+    struct timespec ts = {0, TIME_BETWEEN_MEASUREMENTS};
 
-	// Collect measurements
-	for (uint64_t i = 0; i < arg->iters; i++) {
+    // Collect measurements
+    for (uint64_t i = 0; i < arg->iters; i++) {
+        // Wait before next measurement
+        nanosleep(&ts, NULL);
 
-		// Wait before next measurement
-		nanosleep((const struct timespec[]){{0, TIME_BETWEEN_MEASUREMENTS}}, NULL);
+        // Collect measurementi
+		start_cc = read_pmccntr_el0();
+		start_vc = read_cntvct_el0();
 
-		// Collect measurement
-		energy = rapl_msr(attacker_core_ID, PP0_ENERGY);
-		freq_sample = frequency_msr_raw(attacker_core_ID);
+		energy = read_power(mb);
 
 		// Store measurement
-		uint64_t aperf_delta = freq_sample.aperf - prev_freq_sample.aperf;
-		uint64_t mperf_delta = freq_sample.mperf - prev_freq_sample.mperf;
-		uint32_t khz = (maximum_frequency * aperf_delta) / mperf_delta;
-		fprintf(output_file, "%.15f %" PRIu32 "\n", energy - prev_energy, khz);
+        uint64_t cc_delta = start_cc - prev_cc;
+        uint64_t vc_delta = start_vc - prev_vc;
+        double hz =((double) cc_delta / (double) vc_delta * (double) cntfrq);
+        fprintf(freq_file, "%.15f %.15f\n", energy, hz);
+	
 
-		// Save current
+        	// Save current
+		prev_cc = start_cc;
+		prev_vc = start_vc;
 		prev_energy = energy;
-		prev_freq_sample = freq_sample;
 	}
 
 	// Clean up
@@ -174,11 +184,6 @@ int main(int argc, char *argv[])
 
 	// Prepare up monitor/attacker
 	attacker_core_ID = 0;
-	set_frequency_units(attacker_core_ID);
-	frequency_msr_raw(attacker_core_ID);
-	set_rapl_units(attacker_core_ID);
-	rapl_msr(attacker_core_ID, PP0_ENERGY);
-
 	// Allocate memory for the threads
 	char *tstacks = mmap(NULL, (ntasks + 1) * STACK_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
