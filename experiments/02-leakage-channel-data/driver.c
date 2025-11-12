@@ -1,5 +1,3 @@
-// driver.c  -- updated to use new util library (../util/util.h)
-
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,9 +13,8 @@
 #include <signal.h>
 #include <time.h>
 #include <math.h>
-#include "../../util/util.h"        // new util library (contains pin_to_core, mbox/gencmd helpers if present)
+#include "../../util/util.h"        
 
-/* If your util.h provides another pin function name, adjust the call in monitor() to match. */
 
 volatile static int attacker_core_ID;
 
@@ -109,16 +106,17 @@ static __attribute__((noinline)) int monitor(void *in)
     uint64_t prev_cc = start_cc;
     uint64_t prev_vc = start_vc;
     uint64_t cntfrq = read_cntfrq_el0();
+
     // Collect measurements
+    struct timespec ts = {0, TIME_BETWEEN_MEASUREMENTS};
     for (uint64_t i = 0; i < arg->iters; i++) {
 
-	struct timespec ts = {0, TIME_BETWEEN_MEASUREMENTS};
         // Wait before next measurement
         nanosleep(&ts, NULL);
 
         // Collect measurementi
-	start_cc = read_pmccntr_el0();
-	start_vc = read_cntvct_el0();
+        start_cc = read_pmccntr_el0();
+        start_vc = read_cntvct_el0();
 
         // Store measurement
         uint64_t cc_delta = start_cc - prev_cc;
@@ -127,8 +125,8 @@ static __attribute__((noinline)) int monitor(void *in)
         fprintf(output_file, "%" PRIu64 "\n", hz);
 
         // Save current
-	prev_cc = start_cc;
-	prev_vc = start_vc;
+        prev_cc = start_cc;
+        prev_vc = start_vc;
     }
 
     // Clean up
