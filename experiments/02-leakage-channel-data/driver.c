@@ -202,6 +202,7 @@ int main(int argc, char *argv[])
 
 #if (SLEEP == 1)
         // Cool down
+	printf("Cooling...\n");
         sleep(30);
 #endif
 

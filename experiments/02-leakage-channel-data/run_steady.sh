@@ -26,6 +26,3 @@ done
 
 sudo ./bin/driver-steady ${num_thread} ${samples} ${outer}
 cp -r out data/out-steady-${date}
-
-# Unload MSR module
-sudo modprobe -r msr
