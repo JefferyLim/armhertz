@@ -179,3 +179,21 @@ int read_pmic_adc(int fd, const char *commands[], size_t n_commands, double resu
     return 0;
 }
 
+
+double read_power(int fd){
+    double volts, amps;
+
+    char result_buf[UTIL_MAX_STRING] = {};
+  
+    int ret = gencmd(fd, "pmic_read_adc VDD_CORE_A", result_buf, sizeof result_buf);
+
+    amps = get_vcgencmd_value(result_buf);
+
+	
+
+    ret = gencmd(fd, "measure_volts", result_buf, sizeof result_buf);
+        volts = get_vcgencmd_value(result_buf);
+
+	return amps*volts;
+
+}

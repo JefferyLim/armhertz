@@ -1,7 +1,7 @@
 CC:= gcc
 CFLAGS:= -O3 -D_POSIX_SOURCE -D_GNU_SOURCE -falign-functions=64 -Wno-unused-result -Wall
 LIBS:= -lpthread -lrt -lm
-UTILS:= ../util/util.o
+UTILS:= ../../util/util.o
 
 all: obj bin out data driver
 

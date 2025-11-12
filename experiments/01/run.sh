@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 
-TOTAL_PHYSICAL_CORES=`grep '^core id' /proc/cpuinfo | sort -u | wc -l`
-TOTAL_LOGICAL_CORES=`grep '^core id' /proc/cpuinfo | wc -l`
+TOTAL_PHYSICAL_CORES=4
+TOTAL_LOGICAL_CORES=4
 
-# Load MSR module
-sudo modprobe msr
+echo "${TOTAL_PHYSICAL_CORES}"
+echo "${TOTAL_LOGICAL_CORES}"
+
 
 # Parse args
 if [ $# -eq 1 ]; then
@@ -18,7 +19,7 @@ else
 fi
 
 # Setup
-samples=3500	# 17.5 seconds (one sample every 5 milliseconds)
+samples=35000	# 17.5 seconds (one sample every 5 milliseconds)
 num_thread=$TOTAL_LOGICAL_CORES
 date=`date +"%m%d-%H%M"`
 
@@ -36,6 +37,3 @@ done
 
 sudo ./bin/driver ${num_thread} ${samples} ${outer}
 cp -r out data/out-${date}
-
-# Unload MSR module
-sudo modprobe -r msr

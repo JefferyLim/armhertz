@@ -1,9 +1,26 @@
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <sched.h>
+#include <inttypes.h>
+#include <unistd.h>
+#include <sys/mman.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <sys/resource.h>
+#include <sys/syscall.h>
+#include <signal.h>
+#include <time.h>
+#include <math.h>
+#include <sys/resource.h>
+#include <pthread.h>
+#include <string.h>
 #include "../../util/util.h"
 
 volatile static int attacker_core_ID;
 
-#define TIME_BETWEEN_MEASUREMENTS 5000000L // 5 millisecond
+#define TIME_BETWEEN_MEASUREMENTS 50000000L // 5 millisecond
 
 // Runs the given command
 static void stress(void *command)
@@ -23,8 +40,9 @@ static __attribute__((noinline)) int monitor(void *in)
 
 	struct args_t *arg = (struct args_t *)in;
 
+	int mb = mbox_open();
 	// Pin monitor to a single CPU
-	pin_cpu(attacker_core_ID);
+	pin_to_core(attacker_core_ID);
 
 	// Set filename
 	char energy_filename[64];
@@ -42,36 +60,42 @@ static __attribute__((noinline)) int monitor(void *in)
 	if (freq_file == NULL) {
 		perror("output file");
 	}
-
+    	
 	// Prepare
-	double energy, prev_energy = rapl_msr(attacker_core_ID, PKG_ENERGY);
-	struct freq_sample_t freq_sample, prev_freq_sample = frequency_msr_raw(attacker_core_ID);
-	// uint32_t freq = frequency_cpufreq(attacker_core_ID);
-
-	// Collect measurements
-	for (uint64_t i = 0; i < arg->iters; i++) {
-
-		// Wait before next measurement
+    	uint64_t start_cc = read_pmccntr_el0();
+    	uint64_t start_vc = read_cntvct_el0();
+    	uint64_t prev_cc = start_cc;
+    	uint64_t prev_vc = start_vc;
+    	uint64_t cntfrq = read_cntfrq_el0();
+	double energy = read_power(mb);
+	double prev_energy = energy;
+	
+	
+    	// Collect measurements
+    	for (uint64_t i = 0; i < arg->iters; i++) {
 		struct timespec ts = {0, TIME_BETWEEN_MEASUREMENTS};
-		nanosleep(&ts, NULL);
+        	// Wait before next measurement
+        	nanosleep(&ts, NULL);
 
-		// Collect measurement
+        	// Collect measurementi
 		start_cc = read_pmccntr_el0();
 		start_vc = read_cntvct_el0();
 
-
-		energy = rapl_msr(attacker_core_ID, PKG_ENERGY);
-		fprintf(energy_file, "%.15f\n", energy - prev_energy);
-		prev_energy = energy;
+		energy = read_power(mb);
 
 		// Store measurement
-		uint64_t aperf_delta = freq_sample.aperf - prev_freq_sample.aperf;
-		uint64_t mperf_delta = freq_sample.mperf - prev_freq_sample.mperf;
-		uint32_t khz = (maximum_frequency * aperf_delta) / mperf_delta;
-		fprintf(freq_file, "%" PRIu32 "\n", khz);
+	        uint64_t cc_delta = start_cc - prev_cc;
+        	uint64_t vc_delta = start_vc - prev_vc;
+	        double hz =((double) cc_delta / (double) vc_delta * (double) cntfrq);
+        	fprintf(freq_file, "%.15f\n", hz);
+	
+		// We only have the currrent power consumption, not total	
+		fprintf(energy_file, "%.15f\n", energy);
 
-		// Save current
-		prev_freq_sample = freq_sample;
+        	// Save current
+		prev_cc = start_cc;
+		prev_vc = start_vc;
+		prev_energy = energy;
 	}
 
 	// Clean up
@@ -87,7 +111,6 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "Wrong Input! Enter: %s <ntasks> <samples> <outer>\n", argv[0]);
 		exit(EXIT_FAILURE);
 	}
-yi
 
 	// Read in args
 	int ntasks;
@@ -131,10 +154,6 @@ yi
 
 	// Prepare up monitor/attacker
 	attacker_core_ID = 0;
-	set_frequency_units(attacker_core_ID);
-	frequency_msr_raw(attacker_core_ID);
-	set_rapl_units(attacker_core_ID);
-	rapl_msr(attacker_core_ID, PKG_ENERGY);
 
 	// Run experiment once for each selector
 	for (int i = 0; i < outer * num_selectors; i++) {
@@ -149,11 +168,12 @@ yi
 		char cpu_mask[16], command[256];
 		sprintf(cpu_mask, "0-%d", ntasks - 1);
 		sprintf(command, "taskset -c %s stress-ng -q --cpu %d --cpu-method %s -t 10m", cpu_mask, ntasks, selectors[i % num_selectors]);
-		printf("Running: %s\n", command);
 
+		printf("Cooling... \n");
 		// Cool down
-		sleep(90);
+		sleep(60);
 
+		printf("Running: %s\n", command);
 		// Start stress
 		pthread_create(&thread1, NULL, (void *)&stress, (void *)command);
 

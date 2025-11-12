@@ -73,6 +73,8 @@ double get_cpu_freq_hz(int core_id);
  */
 int read_pmic_adc(int fd, const char *commands[], size_t n_commands, double results[]);
 
+double read_power(int fd);
+
 #ifdef __cplusplus
 }
 #endif
