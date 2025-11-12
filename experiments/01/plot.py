@@ -26,7 +26,7 @@ def parse_freq(fn):
     with open(fn) as f:
         for line in f:
             c = line.strip()
-            freq.append(int(c))
+            freq.append(float(c))
     return np.array(freq)
 
 
@@ -54,12 +54,12 @@ def main():
     #    ./out/all_%s_%04d.out
     energy_files = sorted(glob.glob(in_dir + "/energy_*"), reverse=True)
     freq_files = sorted(glob.glob(in_dir + "/freq_*"), reverse=True)
+    
 
     ylowf, ymaxf = 0, 0
     ylowe, ymaxe = 0, 0
 
     for f, g in zip(energy_files, freq_files):
-
         # Parse trace
         raw_energy_trace = parse_energy(f)
         raw_freq_trace = parse_freq(g)
@@ -68,9 +68,10 @@ def main():
         power_trace = []
         prev_sample = 0
         thres = np.percentile(raw_energy_trace, 99)     # Exclude outliers
+        print(thres)
         for i, x in enumerate(raw_energy_trace[10:]):   # Exclude first 10 samples
             if x > 0 and x <= thres:
-                power_sample = x / 0.005  		# 0.005 is to convert to power since we sample energy every 5ms
+                power_sample = x  		# 0.005 is to convert to power since we sample energy every 5ms
                 power_trace.append(power_sample)
                 prev_sample = power_sample
             else:
@@ -91,7 +92,7 @@ def main():
         plt.subplot(2, 1, 1)
         color = "tab:blue"
         # plt.ylabel('Frequency (GHz)')
-        plt.gca().yaxis.set_major_locator(ticker.MultipleLocator(0.1))
+        plt.gca().yaxis.set_major_locator(ticker.MultipleLocator(100))
         plt.plot(x_axis, freq_trace, linewidth=0.2, color=color, label="Frequency (GHz)")
         plt.legend(fontsize=7, loc='upper right')
         # plt.grid(axis='y')
@@ -112,7 +113,7 @@ def main():
         plt.subplot(2, 1, 2)
         color = "tab:red"
         # plt.ylabel('Power (W)')
-        plt.gca().yaxis.set_major_locator(ticker.MultipleLocator(10))
+        plt.gca().yaxis.set_major_locator(ticker.MultipleLocator(0.1))
         plt.plot(x_axis, power_trace, linewidth=0.2, color=color, label="Power (W)", linestyle="--")
         plt.legend(fontsize=7, loc='upper right')
 
@@ -128,7 +129,11 @@ def main():
 
         # Save file
         plt.tight_layout(pad=0, w_pad=0.5, h_pad=.5)
-        plt.savefig("plot/stress_%s.pdf" % "_".join(f.split("/")[-1].split(".")[0].split("_")[1:]))
+        plt.show()
+        plt.savefig(os.path.join(
+        "plot",
+        "stress_%s.pdf" % "_".join(os.path.splitext(os.path.basename(f))[0].split("_")[1:])
+    ))
         plt.close()
         plt.clf()
 
