@@ -4,7 +4,7 @@ TOTAL_PHYSICAL_CORES=4
 TOTAL_LOGICAL_CORES=4
 
 # Setup
-samples=10000	# 10 seconds
+samples=60000	# 10 seconds
 outer=30
 num_thread=$TOTAL_LOGICAL_CORES
 date=`date +"%m%d-%H%M"`
@@ -13,7 +13,7 @@ date=`date +"%m%d-%H%M"`
 echo "This script will take about $((((10)*$outer*(16+64+64+255+8+64*4)/60+10)/60)) hours. Reduce 'outer' if you want a shorter run."
 
 ### Warm Up ###
-stress-ng -q --cpu $TOTAL_LOGICAL_CORES -t 10m
+stress-ng -q --cpu $TOTAL_LOGICAL_CORES -t 20m
 
 ### Hamming Distance ###
 cd ../03-leakage-model-hd

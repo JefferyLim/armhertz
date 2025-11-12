@@ -121,8 +121,8 @@ static __attribute__((noinline)) int monitor(void *in)
         // Store measurement
         uint64_t cc_delta = start_cc - prev_cc;
         uint64_t vc_delta = start_vc - prev_vc;
-        uint64_t hz =(uint64_t)((double) cc_delta / (double) vc_delta * (double) cntfrq);
-        fprintf(output_file, "%" PRIu64 "\n", hz);
+        double hz =((double) cc_delta / (double) vc_delta * (double) cntfrq);
+        fprintf(output_file, "%.12f\n", hz);
 
         // Save current
         prev_cc = start_cc;

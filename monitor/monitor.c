@@ -145,7 +145,7 @@ double get_cpu_freq_mhz(int core_id) {
     uint64_t start_cc = read_pmccntr();
     uint64_t start_vc = read_cntvct_el0();
 
-    struct timespec ts = {0, 500000}; // 500 us
+    struct timespec ts = {0,  5 * 1000 * 100}; // 5ms // 500 us
     nanosleep(&ts, NULL);
 
     uint64_t end_cc = read_pmccntr();
@@ -153,8 +153,9 @@ double get_cpu_freq_mhz(int core_id) {
 
     uint64_t delta_cc = end_cc - start_cc;
     uint64_t delta_vc = end_vc - start_vc;
+    double time_elapsed = (double)delta_vc / (double)cntfrq;
 
-    double freq_hz = ((double)delta_cc / (double)delta_vc) * (double)cntfrq;
+    double freq_hz = delta_cc/time_elapsed;// ((double)delta_cc / ((double)delta_vc) * (double)cntfrq);
     return freq_hz; // Hz
 }
 

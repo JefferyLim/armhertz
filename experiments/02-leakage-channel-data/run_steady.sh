@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 
-TOTAL_PHYSICAL_CORES=`grep '^core id' /proc/cpuinfo | sort -u | wc -l`
-TOTAL_LOGICAL_CORES=`grep '^core id' /proc/cpuinfo | wc -l`
+TOTAL_PHYSICAL_CORES=4
+TOTAL_LOGICAL_CORES=4
 
 # Setup
 samples=10000		# 10 seconds
-outer=30			# 30 reps
+outer=5			# 30 reps
 num_thread=$TOTAL_LOGICAL_CORES
 date=`date +"%m%d-%H%M"`
 
