@@ -98,7 +98,7 @@ static __attribute__((noinline)) int victim(void *varg)
         "mov x14, %1\n\t" // Set register x14 to second operand
         "mov x15, %1\n\t" // Set register x15 to second operand
 
-        ".align 64\n\t"
+        ".balign 64 64\n\t"
         "loop:\n\t"
 
         "orr x8, x8, %0\n\t"   // OR first operand with x8

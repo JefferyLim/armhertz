@@ -130,7 +130,7 @@ static __attribute__((noinline)) int victim(void *varg)
         "mov x14, %0\n\t" // Set x14 to full_operand
         "mov x15, %0\n\t" // Set x15 to full_operand
 
-        ".align 64\n\t"
+        ".balign 64\n\t"
         "loop:\n\t"
 
         "orr x1, x1, %0\n\t"  // OR x1 with full_operand

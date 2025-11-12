@@ -69,7 +69,7 @@ static __attribute__((noinline)) int victim(void *varg)
  */
  
      asm volatile(
-        ".align 64\n\t"
+        ".balign 64\n\t"
         "loop:\n\t"
 
         "lsl x0, x1, x0\n\t"   // Logical shift left: x0 = my_uint64 << count

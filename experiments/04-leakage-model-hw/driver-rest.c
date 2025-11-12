@@ -114,7 +114,7 @@ static __attribute__((noinline)) int victim(void *varg)
         "mov x15, %1\n\t" // Set x15 to operand
         ".endr\n\t"
 
-        ".align 64\n\t"
+        ".balign 64\n\t"
         "loop:\n\t"
 
         ".rept 100\n\t"
