@@ -36,7 +36,7 @@ static __attribute__((noinline)) int victim(void *varg)
 	uint64_t my_uint64 = 0x0000FFFFFFFF0000;
 	uint64_t count = (uint64_t)arg->selector;
 
-	asm volatile(
+/* 	asm volatile(
 		".align 64\t\n"
 		"loop:\n\t"
 
@@ -66,6 +66,36 @@ static __attribute__((noinline)) int victim(void *varg)
 		:
 		: "r"(count), "r"(my_uint64)
 		: "rbx", "rcx", "rsi", "rdi", "r8", "r9", "r10", "r11", "r12", "r13");
+ */
+ 
+     asm volatile(
+        ".align 64\n\t"
+        "loop:\n\t"
+
+        "lsl x0, x1, x0\n\t"   // Logical shift left: x0 = my_uint64 << count
+        "lsl x0, x1, x2\n\t"   // Logical shift left: x0 = my_uint64 << count
+        "lsr x0, x3, x4\n\t"   // Logical shift right: x0 = my_uint64 >> count
+        "lsr x0, x3, x5\n\t"   // Logical shift right: x0 = my_uint64 >> count
+        "lsl x0, x1, x6\n\t"   // Logical shift left: x0 = my_uint64 << count
+        "lsl x0, x1, x7\n\t"   // Logical shift left: x0 = my_uint64 << count
+        "lsr x0, x3, x8\n\t"   // Logical shift right: x0 = my_uint64 >> count
+        "lsr x0, x3, x9\n\t"   // Logical shift right: x0 = my_uint64 >> count
+        "lsl x0, x1, x10\n\t"  // Logical shift left: x0 = my_uint64 << count
+        "lsl x0, x1, x11\n\t"  // Logical shift left: x0 = my_uint64 << count
+        "lsl x0, x1, x12\n\t"  // Logical shift left: x0 = my_uint64 << count
+        "lsl x0, x1, x13\n\t"  // Logical shift left: x0 = my_uint64 << count
+
+        "lsr x0, x3, x14\n\t"  // Logical shift right: x0 = my_uint64 >> count
+        "lsr x0, x3, x15\n\t"  // Logical shift right: x0 = my_uint64 >> count
+        "lsl x0, x1, x16\n\t"  // Logical shift left: x0 = my_uint64 << count
+        "lsl x0, x1, x17\n\t"  // Logical shift left: x0 = my_uint64 << count
+
+        "b loop\n\t"            // Branch to loop (equivalent to jmp loop)
+
+        :                       // No output operands
+        : "r"(count), "r"(my_uint64)  // Input operands
+        : "x0", "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10", "x11", "x12", "x13", "x14", "x15"  // Clobbered registers
+    );
 
 	return 0;
 }
