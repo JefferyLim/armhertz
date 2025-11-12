@@ -78,7 +78,7 @@ static __attribute__((noinline)) int monitor(void *in)
 	struct args_t *arg = (struct args_t *)in;
 
 	// Pin monitor to a single CPU
-	pin_cpu(attacker_core_ID);
+	pin_to_core(attacker_core_ID);
     int mb = mbox_open();
 
 	// Set filename
@@ -120,7 +120,7 @@ static __attribute__((noinline)) int monitor(void *in)
         uint64_t cc_delta = start_cc - prev_cc;
         uint64_t vc_delta = start_vc - prev_vc;
         double hz =((double) cc_delta / (double) vc_delta * (double) cntfrq);
-        fprintf(freq_file, "%.15f %.15f\n", energy, hz);
+        fprintf(output_file, "%.15f %.15f\n", energy, hz);
 	
 
         	// Save current
