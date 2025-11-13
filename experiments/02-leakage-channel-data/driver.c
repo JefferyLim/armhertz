@@ -88,6 +88,7 @@ static __attribute__((noinline)) int monitor(void *in)
     // Pin monitor to a single CPU
     // NOTE: your new util library exposes pin_to_core(int). Use that instead of pin_cpu.
     pin_to_core(attacker_core_ID);
+    int mb = mbox_open();
 
     // Set filename
     char output_filename[64];
@@ -106,28 +107,30 @@ static __attribute__((noinline)) int monitor(void *in)
     uint64_t prev_cc = start_cc;
     uint64_t prev_vc = start_vc;
     uint64_t cntfrq = read_cntfrq_el0();
+	double energy;
+    double time = 0;
+    struct timespec ts = {0, TIME_BETWEEN_MEASUREMENTS};
 
     // Collect measurements
-    struct timespec ts = {0, TIME_BETWEEN_MEASUREMENTS};
     for (uint64_t i = 0; i < arg->iters; i++) {
-
         // Wait before next measurement
         nanosleep(&ts, NULL);
+        // Collect measurement
+		start_cc = read_pmccntr_el0();
+		start_vc = read_cntvct_el0();
 
-        // Collect measurementi
-        start_cc = read_pmccntr_el0();
-        start_vc = read_cntvct_el0();
-
-        // Store measurement
-        uint64_t cc_delta = start_cc - prev_cc;
-        uint64_t vc_delta = start_vc - prev_vc;
-        double hz =((double) cc_delta / (double) vc_delta * (double) cntfrq);
-        fprintf(output_file, "%.12f\n", hz);
-
-        // Save current
-        prev_cc = start_cc;
-        prev_vc = start_vc;
-    }
+        // Adds about 0.014 seconds
+		//energy = read_power(mb); // adds around 0.00374 seconds on average
+        double hz = read_hz(mb); // adds 0.011 seconds
+		//double hz = get_cpu_freq_hz(0); 
+        time += (double)(start_vc - prev_vc)/(double) cntfrq;
+        
+        fprintf(output_file, "%.15f %.15f\n", hz, time);
+	
+		// Save current
+		prev_cc = start_cc;
+		prev_vc = start_vc;
+	}
 
     // Clean up
     fclose(output_file);
@@ -202,8 +205,8 @@ int main(int argc, char *argv[])
 
 #if (SLEEP == 1)
         // Cool down
-	printf("Cooling...\n");
-        sleep(30);
+	    printf("Cooling...\n");
+        
 #endif
 
         // Start victim threads

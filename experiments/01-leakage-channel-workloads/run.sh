@@ -3,10 +3,6 @@
 TOTAL_PHYSICAL_CORES=4
 TOTAL_LOGICAL_CORES=4
 
-echo "${TOTAL_PHYSICAL_CORES}"
-echo "${TOTAL_LOGICAL_CORES}"
-
-
 # Parse args
 if [ $# -eq 1 ]; then
 	outer=$1
@@ -19,7 +15,7 @@ else
 fi
 
 # Setup
-samples=35000	# 17.5 seconds (one sample every 5 milliseconds)
+samples=3500	# 17.5 seconds (one sample every 5 milliseconds)
 num_thread=$TOTAL_LOGICAL_CORES
 date=`date +"%m%d-%H%M"`
 

@@ -11,10 +11,13 @@ extern "C" {
 /* Constants */
 #define UTIL_DEVICE_FILE_NAME "/dev/vcio"
 #define UTIL_MAJOR_NUM 100
-#define UTIL_MAX_STRING 1024
+#define UTIL_MAX_STRING 256
 
 /* IOCTL - same layout as your original code */
 #define UTIL_IOCTL_MBOX_PROPERTY _IOWR(UTIL_MAJOR_NUM, 0, char *)
+
+/* Global mailbox buffer (aligned for VideoCore) */
+extern unsigned gencmd_buffer[(UTIL_MAX_STRING >> 2) + 7];
 
 /* Open/close mailbox device. Returns file descriptor >=0 on success, -1 on error. */
 int mbox_open(void);
@@ -74,6 +77,8 @@ double get_cpu_freq_hz(int core_id);
 int read_pmic_adc(int fd, const char *commands[], size_t n_commands, double results[]);
 
 double read_power(int fd);
+
+double read_hz(int fd);
 
 #ifdef __cplusplus
 }

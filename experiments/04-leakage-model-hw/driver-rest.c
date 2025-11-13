@@ -169,14 +169,12 @@ static __attribute__((noinline)) int monitor(void *in)
 		perror("output file");
 	}
     
-	// Prepare
-    uint64_t start_cc = read_pmccntr_el0();
-    uint64_t start_vc = read_cntvct_el0();
-    uint64_t prev_cc = start_cc;
-    uint64_t prev_vc = start_vc;
-    uint64_t cntfrq = read_cntfrq_el0();
-    double energy = read_power(mb);
-    double prev_energy = energy;
+    // Prepare
+    // uint64_t start_cc = read_pmccntr_el0();
+    // uint64_t start_vc = read_cntvct_el0();
+    // uint64_t prev_cc = start_cc;
+    // uint64_t prev_vc = start_vc;
+    // uint64_t cntfrq = read_cntfrq_el0();
 	
     struct timespec ts = {0, TIME_BETWEEN_MEASUREMENTS};
 
@@ -185,24 +183,23 @@ static __attribute__((noinline)) int monitor(void *in)
         // Wait before next measurement
         nanosleep(&ts, NULL);
 
-        // Collect measurementi
-		start_cc = read_pmccntr_el0();
-		start_vc = read_cntvct_el0();
+        // Collect measurement
+		// start_cc = read_pmccntr_el0();
+		// start_vc = read_cntvct_el0();
 
 		energy = read_power(mb);
 
 		// Store measurement
-        uint64_t cc_delta = start_cc - prev_cc;
-        uint64_t vc_delta = start_vc - prev_vc;
-        double hz =((double) cc_delta / (double) vc_delta * (double) cntfrq);
+        // uint64_t cc_delta = start_cc - prev_cc;
+        // uint64_t vc_delta = start_vc - prev_vc;
+        // double hz =((double) cc_delta / (double) vc_delta * (double) cntfrq);
 
-		// We only have the currrent power consumption, not total	
-		fprintf(output_file, "%.15f %.15f\n", energy, hz);
-        
-        // Save current
-		prev_cc = start_cc;
-		prev_vc = start_vc;
-		prev_energy = energy;
+		double hz = read_hz(mb);
+        fprintf(output_file, "%.15f %.15f\n", energy, hz);
+	
+		// Save current
+		// prev_cc = start_cc;
+		// prev_vc = start_vc;
 	}
 
 	// Clean up

@@ -3,9 +3,6 @@
 TOTAL_PHYSICAL_CORES=4
 TOTAL_LOGICAL_CORES=4
 
-# Load MSR module
-sudo modprobe msr
-
 # Setup
 samples=40000		# 40 seconds
 outer=10			# 105 reps
@@ -26,6 +23,3 @@ done
 
 sudo ./bin/driver ${num_thread} ${samples} ${outer}
 cp -r out data/out-drops-${date}
-
-# Unload MSR module
-sudo modprobe -r msr

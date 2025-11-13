@@ -41,9 +41,9 @@ void mbox_close(int fd)
 /* Implementation of gencmd - similar layout to your original code */
 int gencmd(int file_desc, const char *command, char *result, size_t result_len)
 {
-    if (!command || !result || result_len == 0) return -1;
+    //if (!command || !result || result_len == 0) return -1;
 
-    if (strlen(command) + 1 >= UTIL_MAX_STRING) return -1;
+    //if (strlen(command) + 1 >= UTIL_MAX_STRING) return -1;
 
     /* buffer sized to (UTIL_MAX_STRING/4) + some slack so we can use as uint32 array */
     unsigned p[(UTIL_MAX_STRING>>2) + 7];
@@ -181,19 +181,25 @@ int read_pmic_adc(int fd, const char *commands[], size_t n_commands, double resu
 
 
 double read_power(int fd){
-    double volts, amps;
-
+    double volts, amps = 0.0;
     char result_buf[UTIL_MAX_STRING] = {};
   
-    int ret = gencmd(fd, "pmic_read_adc VDD_CORE_A", result_buf, sizeof result_buf);
-
-    amps = get_vcgencmd_value(result_buf);
-
-	
-
-    ret = gencmd(fd, "measure_volts", result_buf, sizeof result_buf);
-        volts = get_vcgencmd_value(result_buf);
-
+    gencmd(fd, "pmic_read_adc VDD_CORE_A VDD_CORE_V", result_buf, sizeof result_buf);
+    const char *a_eq = memchr(result_buf, '=', strlen(result_buf));
+    amps = strtod(a_eq + 1, NULL);
+    const char *v_eq = memchr(a_eq ? a_eq + 1 : result_buf, '=', strlen(result_buf));
+    volts = strtod(v_eq + 1, NULL);
 	return amps*volts;
 
+}
+
+//https://github.com/raspberrypi/linux/blob/29653ef5475124316b9284adb6cbfc97e9cae48f/drivers/clk/bcm/clk-bcm2835.c#L1955-L1964
+double read_hz(int fd){
+    double hz;
+    char result_buf[UTIL_MAX_STRING] = {};
+  
+    gencmd(fd, "measure_clock arm", result_buf, sizeof result_buf);
+    hz = get_vcgencmd_value(result_buf);
+
+	return hz;
 }
