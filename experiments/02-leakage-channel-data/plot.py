@@ -14,12 +14,15 @@ import multiprocessing
 
 def parse_file(fn):
     freq = []
+    time = []
     with open(fn) as f:
         for line in f:
-            a = line.strip()
-            freq.append(float(a))
-
-    return np.array(freq)
+            c = line.strip().split()
+            if len(c) >= 2:
+                freq.append(float(c[0]) / 1e6)   # Hz → MHz
+                time.append(float(c[1]))         # seconds
+                
+    return np.array(freq), np.array(time)
 
 
 # Density Plot and Histogram
@@ -42,9 +45,10 @@ def detect_drop(trace):
     return best_x
 
 
-def f_pool(secret_bit, i, trace, drop_idxs, pre_drop_freq, post_drop_freq):
+def f_pool(secret_bit, i, trace, drop_idxs, pre_drop_freq, post_drop_freq, time):
     trace = trace[500:]     # Exclude first few samples
-
+    freq_x_axis = time[500:]
+    
     # Save index of the drop
     drop_idx = detect_drop(trace)
     
@@ -70,9 +74,6 @@ def f_pool(secret_bit, i, trace, drop_idxs, pre_drop_freq, post_drop_freq):
     # FIXME: Change to True to plot drop in traces
     if (False):
         plt.figure(figsize=(20, 3.8))
-        freq_x_axis = []
-        for j in range(len(trace)):
-            freq_x_axis.append(j / 1000)
         plt.plot(freq_x_axis, trace)
         plt.axvline(x=drop_idx / 1000, color='red')
         plt.savefig("./plot/freq_%s_%d.png" % (secret_bit, i))
@@ -127,7 +128,7 @@ def main():
     for f in out_files:
         label = "_".join(os.path.splitext(os.path.basename(f))[0].split("_")[1:-1])
         rept_idx = os.path.splitext(os.path.basename(f))[0].split("_")[-1]
-        freq_trace = parse_file(f)
+        freq_trace, time_trace = parse_file(f)
 
         # Plot raw frequency trace if needed (useful for debug)
         if (plot_raw_freq):
@@ -160,7 +161,6 @@ def main():
         # Parse data
         for label, trace in freq_label_dict.items():
         
-
             # Get mean/std for each selector
             samples_mean = np.mean(trace)
             samples_std = np.std(trace)
@@ -172,11 +172,10 @@ def main():
             samples_filtered = []
             for sample in trace:
                 if abs(sample - samples_mean) <= 6 * samples_std:
-                    if(sample >= 1.4e9):
-                        samples_filtered.append(sample)    # the + 0.05 is because the hist takes [4.2, 4.3) as range and we want 4.299999 in 4.3
+                    samples_filtered.append(sample)    # the + 0.05 is because the hist takes [4.2, 4.3) as range and we want 4.299999 in 4.3
 
             # Store data for bins
-            minimum = min(round(min(samples_filtered), 1), 1.4e9)
+            minimum = min(round(min(samples_filtered), 1), minimum)
             maximum = max(round(max(samples_filtered), 1), maximum)
 
             # Store data for bars
@@ -186,7 +185,7 @@ def main():
 
         # Plot all data
         plt.figure(figsize=(3, 2))
-        bins = np.arange(minimum,   maximum + 0.1e9, 0.1e9)    # FIXME: adjust range
+        bins = np.arange(minimum,  maximum + 100, 100)    # FIXME: adjust range
         
         _, bins, _ = plt.hist(datas, alpha=0.5, bins=bins, weights=weights, label=labels, align="left", density=True)
         
@@ -216,7 +215,7 @@ def main():
             pre_drop_freq = manager.list()
             post_drop_freq = manager.list()
             for i, trace in enumerate(all_traces_for_bit[5:]):  # Exclude first 5 for warmup
-                p = Process(target=f_pool, args=(secret_bit, i, trace, drop_idxs, pre_drop_freq, post_drop_freq))
+                p = Process(target=f_pool, args=(secret_bit, i, trace, drop_idxs, pre_drop_freq, post_drop_freq, time_trace))
                 processes.append(p)
                 p.start()
 
@@ -230,8 +229,7 @@ def main():
             samples_std = np.std(drop_idxs)
             for sample in drop_idxs:
                 if abs(sample - samples_mean) <= 1 * samples_std:
-                    if(sample >= 1.4e9):
-                        samples_filtered.append(sample)
+                    samples_filtered.append(sample)
 
             # Compute mean of indices and means
             if len(drop_idxs) > 0:
