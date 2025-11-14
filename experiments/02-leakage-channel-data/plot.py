@@ -19,11 +19,21 @@ def parse_file(fn):
         for line in f:
             c = line.strip().split()
             if len(c) >= 2:
-                freq.append(float(c[0]) / 1e6)   # Hz → MHz
+                freq.append((float(c[0]) / 1e6))   # Hz → MHz
                 time.append(float(c[1]))         # seconds
-                
 
-    return np.array(freq), np.array(time)
+    
+    cleaned = np.array(freq)
+
+    last_valid = 1450
+
+    for i, val in enumerate(cleaned):
+        if 1450 <= val <= 2450:
+            last_valid = val           # update last valid
+        else:
+            cleaned[i] = last_valid    # forward-fill outlier
+
+    return np.array(cleaned), np.array(time)
 
 # Density Plot and Histogram
 # https://towardsdatascience.com/histograms-and-density-plots-in-python-f6bda88f5ac0
@@ -35,15 +45,15 @@ def detect_drop(trace):
     best_x = 0
     max_diff = 0
     
-    indices = np.where(trace < 1550.0)
+    indices = np.where(trace < 1525.0)
     if indices[0].size > 0:
         drop_1500 = indices[0][0]
     
-    indices = np.where(trace < 2400.0)
+    indices = np.where(trace < 2325.0)
     if indices[0].size > 0:
         drop_2300 = indices[0][0]
 
-    indices = np.where(trace < 2250.0)
+    indices = np.where(trace < 2225.0)
     if indices[0].size > 0:
         drop_2200 = indices[0][0]   
 
@@ -176,8 +186,6 @@ def main():
         rept_idx = os.path.splitext(os.path.basename(f))[0].split("_")[-1]
         freq_trace, time_trace = parse_file(f)
         section_length = len(freq_trace)
-        unique_values = set([int(x) for x in freq_trace])
-        print((unique_values))
         # Plot raw frequency trace if needed (useful for debug)
         if (plot_raw_freq):
             plt.figure(figsize=(20, 3.8))
@@ -185,8 +193,8 @@ def main():
             plt.savefig("./plot/freq_%s_%s.png" % (label, rept_idx))
             plt.clf()
             plt.close()
-
-        
+            
+        # because the clock bins are 1500, 1600, 1700, etc. we are going to round the data to the nearest 50 MHz 
         time_label_dict.setdefault(label, []).extend(time_trace)
         # For steady state experiment
         if plot_steady:
@@ -237,14 +245,22 @@ def main():
         for label, trace in freq_label_dict.items():
             # Example data (replace with actual data)]
 
+            trace = np.array(trace)
+            plt.figure()
+            plt.plot(trace)
+            plt.show()
             # Get mean/std for each selector
             samples_mean = np.mean(trace)
             samples_std = np.std(trace)
-
+            
+            print(min(trace))
+            print(np.argwhere(np.isnan(trace)))
+            indices = np.where(trace == 0.0)
+            print(indices)
             # Print mean
             print("%15s (%d samples): %d +- %d Hz (min %d max %d)" % (label, len(trace), samples_mean, samples_std, min(trace), max(trace)))
             # Calculate the average time between any state and 1500 MHz (within tolerance)
-            average_time, transition_count = calculate_time_spent_in_non_1500_states(time_label_dict[label], trace, target_frequency=1500, tolerance=50, section_length=section_length)
+            average_time, transition_count = calculate_time_spent_in_non_1500_states(time_label_dict[label], trace, target_frequency=1500, tolerance=150, section_length=section_length)
             print(f"Average time spent oscillating to 1500 MHz (within tolerance): {np.mean(average_time)} seconds, {transition_count} transitions")
 
             # Filter outliers (for the plot only)
@@ -256,16 +272,14 @@ def main():
             # Store data for bins
             minimum = min(round(min(samples_filtered), 1), minimum)
             maximum = max(round(max(samples_filtered), 1), maximum)
-
-            # Store data for bars
-            datas.append(samples_filtered)
+            
+            datas.append(trace)
             labels.append("hw={}".format(label))
-            weights.append(np.ones_like(samples_filtered)/float(len(samples_filtered)))
+            weights.append(np.ones_like(trace)/float(len(trace)))
 
         # Plot all data
         plt.figure(figsize=(3, 2))
-        bins = np.arange(minimum,  maximum + 100, 50)    # FIXME: adjust range
-        print(bins)
+        bins = np.arange(1400, 2400 + 100, 50)    # FIXME: adjust range
         _, bins, _ = plt.hist(datas, alpha=0.5, bins=bins, weights=weights, label=labels, align="left", density=False)
         
         plt.gca().xaxis.set_major_locator(ticker.MultipleLocator(100))
@@ -276,6 +290,25 @@ def main():
         plt.show()
         plt.savefig("./plot/hist-freq.pdf", dpi=300)
         plt.clf()
+        plt.close()
+        
+        # If we separate the clock bins between low and high
+        plt.figure(figsize=(3, 2))
+        bins=[0, 2000, 3000]       
+        _, bins, _ = plt.hist(datas, alpha=0.5, bins=bins, weights=weights, label=labels, align="left", density=False)
+        plt.gca().xaxis.set_major_locator(ticker.MultipleLocator(1000))
+        print(bins)
+        xticks = [(bins[i] + bins[i+1]) / 2 for i in range(len(bins)-1)]
+        plt.xticks(bins, ["< 2000", "≥ 2000", ""])
+        plt.xlabel('Frequency (MHz)')
+        plt.ylabel('Probability density')
+        plt.legend(fontsize=7)
+        plt.tight_layout(pad=0.1)
+        plt.show()
+        plt.savefig("./plot/hist-freq_highlow.pdf", dpi=300)
+        plt.clf()
+        plt.close()
+        
         
         
     ###########################################################

@@ -93,6 +93,7 @@ def main():
         color = "tab:blue"
         plt.ylabel('Frequency (GHz)')
         plt.gca().yaxis.set_major_locator(ticker.MultipleLocator(100))
+        plt.gca().xaxis.set_major_locator(ticker.MultipleLocator(5))
         plt.plot(freq_time, freq_trace, linewidth=0.2, color=color, label="Frequency (MHz)")
         plt.legend(fontsize=7, loc='upper right')
         # plt.grid(axis='y')
@@ -129,6 +130,7 @@ def main():
             
         # Shared x axis
         plt.gca().xaxis.set_major_formatter(FormatStrFormatter('%.0f'))  # No decimal places
+        plt.gca().xaxis.set_major_locator(ticker.MultipleLocator(5))
         plt.xlabel('Time (s)')
 
         plt.show()
