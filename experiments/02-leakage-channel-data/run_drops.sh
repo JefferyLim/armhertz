@@ -7,7 +7,7 @@ TOTAL_LOGICAL_CORES=4
 
 # Setup
 samples=20000		# 40 seconds
-outer=100			# 105 reps
+outer=20			# 105 reps
 num_thread=$TOTAL_LOGICAL_CORES
 date=`date +"%m%d-%H%M"`
 

@@ -1,10 +1,3 @@
-cd 01-leakage-channel-workloads/
-./run.sh
-
-cd ../
-
-cd 02-leakage-channel-data/
-
 make
 ./run_steady.sh steady_add
 
@@ -28,6 +21,12 @@ make
 
 ./run_steady.sh steady_mul
 
+sed -i 's/mul /orr /g' driver.c
+make
+
+./run_steady.sh steady_orr
+
+
 sed -i 's/mul /add /g' driver.c
 make
 
@@ -44,3 +43,14 @@ make
 
 ./run_drops.sh drop_lsl
 
+
+sed -i 's/lsl /mul /g' driver.c
+make
+
+./run_drops.sh drop_mul
+
+sed -i 's/mul /orr /g' driver.c
+make
+
+
+./run_drops.sh drop_orr
