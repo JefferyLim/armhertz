@@ -13,6 +13,7 @@
 #include <signal.h>
 #include <time.h>
 #include <math.h>
+#include <pthread.h>
 #include "../../util/util.h"        
 
 
@@ -20,6 +21,12 @@ volatile static int attacker_core_ID;
 
 #define TIME_BETWEEN_MEASUREMENTS 1000000L // 1 millisecond
 #define STACK_SIZE 8192
+
+// Runs the given command
+static void stress(void *command)
+{
+	system((char *)command);
+}
 
 struct args_t {
     uint64_t iters;
@@ -45,34 +52,34 @@ static __attribute__((noinline)) int victim(void *varg)
         ".p2align 6\n"
         "loop:\n"
 
-        "eor x2,  x1, x0\n"
-        "eor x3,  x1, x0\n"
-        "eor x4,  x1, x0\n"
-        "eor x5,  x1, x0\n"
-        "eor x6,  x1, x0\n"
-        "eor x7,  x1, x0\n"
-        "eor x8,  x1, x0\n"
-        "eor x9,  x1, x0\n"
-        "eor x10, x1, x0\n"
-        "eor x11, x1, x0\n"
-        "eor x12, x1, x0\n"
-        "eor x13, x1, x0\n"
-        "eor x14, x1, x0\n"
-        "eor x15, x1, x0\n"
-        "eor x16, x1, x0\n"
-        "eor x17, x1, x0\n"
-        "eor x18, x1, x0\n"
-        "eor x19, x1, x0\n"
-        "eor x20, x1, x0\n"
-        "eor x21, x1, x0\n"
-        "eor x22, x1, x0\n"
-        "eor x23, x1, x0\n"
-        "eor x24, x1, x0\n"
-        "eor x25, x1, x0\n"
-        "eor x27, x1, x0\n"
-        "eor x28, x1, x0\n"
-        "eor x29, x1, x0\n"
-        "eor x30, x1, x0\n"
+        "add x2,  x1, x0\n"
+        "add x3,  x1, x0\n"
+        "add x4,  x1, x0\n"
+        "add x5,  x1, x0\n"
+        "add x6,  x1, x0\n"
+        "add x7,  x1, x0\n"
+        "add x8,  x1, x0\n"
+        "add x9,  x1, x0\n"
+        "add x10, x1, x0\n"
+        "add x11, x1, x0\n"
+        "add x12, x1, x0\n"
+        "add x13, x1, x0\n"
+        "add x14, x1, x0\n"
+        "add x15, x1, x0\n"
+        "add x16, x1, x0\n"
+        "add x17, x1, x0\n"
+        "add x18, x1, x0\n"
+        "add x19, x1, x0\n"
+        "add x20, x1, x0\n"
+        "add x21, x1, x0\n"
+        "add x22, x1, x0\n"
+        "add x23, x1, x0\n"
+        "add x24, x1, x0\n"
+        "add x25, x1, x0\n"
+        "add x27, x1, x0\n"
+        "add x28, x1, x0\n"
+        "add x29, x1, x0\n"
+        "add x30, x1, x0\n"
         "b loop\n"
         :
         : "r"(count), "r"(my_uint64)
@@ -209,10 +216,22 @@ int main(int argc, char *argv[])
 
 #if (SLEEP == 1)
         // Cool down
-	    printf("Cooling...\n");
+	printf("Cooling...\n");
         sleep(60);
+#else
+
+		pthread_t thread1;
+		char cpu_mask[16], command[256];
+		sprintf(command, "stress-ng -q --cpu %d -t 30s", ntasks);
+		pthread_create(&thread1, NULL, (void *)&stress, (void *)command);
+		// Wait for monitor to be done
+		pthread_join(thread1, NULL);
+
+		// Stop stress
+		system("pkill -f stress-ng");
 #endif
 
+	printf("Starting...\n");
         // Start victim threads
         int tids[ntasks];
         for (int tnum = 0; tnum < ntasks; tnum++) {
