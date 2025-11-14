@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 
+NAME=${1:-test}
+echo $NAME
+
+mkdir -p data/${NAME}
 TOTAL_PHYSICAL_CORES=4
 TOTAL_LOGICAL_CORES=4
 
 # Setup
-samples=5000	# 30 seconds (1 ms + 14 ms )
-outer=5			# 30 reps
+samples=10000	    # 30 seconds (1 ms + 14 ms )
+outer=30			# 30 reps
 num_thread=$TOTAL_LOGICAL_CORES
 date=`date +"%m%d-%H%M"`
 
@@ -25,4 +29,4 @@ for selector in 16 32 48; do
 done
 
 sudo ./bin/driver-steady ${num_thread} ${samples} ${outer}
-cp -r out data/out-steady-${date}
+cp -r out data/${NAME}/out-steady-${date}

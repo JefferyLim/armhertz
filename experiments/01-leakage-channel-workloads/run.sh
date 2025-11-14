@@ -15,7 +15,7 @@ else
 fi
 
 # Setup
-samples=3500	# 17.5 seconds (one sample every 5 milliseconds)
+samples=10000	# 17.5 seconds (one sample every 5 milliseconds)
 num_thread=$TOTAL_LOGICAL_CORES
 date=`date +"%m%d-%H%M"`
 

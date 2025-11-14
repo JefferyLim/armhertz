@@ -155,7 +155,7 @@ double get_cpu_freq_mhz(int core_id) {
     uint64_t delta_vc = end_vc - start_vc;
     double time_elapsed = (double)delta_vc / (double)cntfrq;
 
-    double freq_hz = delta_cc/time_elapsed;// ((double)delta_cc / ((double)delta_vc) * (double)cntfrq);
+    double freq_hz = (double)delta_cc/time_elapsed;//((double)delta_cc / ((double)delta_vc) * (double)cntfrq);
     return freq_hz; // Hz
 }
 
@@ -170,6 +170,7 @@ void read_pmic_adc(int mb) {
         "pmic_read_adc 1V1_SYS_A",
         "pmic_read_adc 0V8_SW_A",
         "pmic_read_adc VDD_CORE_A",
+        "pmic_read_adc VDD_CORE_V",
     };
 
     for (int i = 0; i < sizeof(pmic_commands) / sizeof(pmic_commands[0]); ++i) {

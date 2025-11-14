@@ -44,36 +44,41 @@ static __attribute__((noinline)) int victim(void *varg)
     asm volatile(
         ".p2align 6\n"
         "loop:\n"
-        "lsl x2,  x1, x0\n"
-        "lsl x3,  x1, x0\n"
-        "lsl x4,  x1, x0\n"
-        "lsl x5,  x1, x0\n"
-        "lsl x6,  x1, x0\n"
-        "lsl x7,  x1, x0\n"
-        "lsl x8,  x1, x0\n"
-        "lsl x9,  x1, x0\n"
-        "lsl x10, x1, x0\n"
-        "lsl x11, x1, x0\n"
-        "lsl x12, x1, x0\n"
-        "lsl x13, x1, x0\n"
-        "lsl x14, x1, x0\n"
-        "lsl x15, x1, x0\n"
-        "lsl x16, x1, x0\n"
-        "lsl x17, x1, x0\n"
-        "lsl x18, x1, x0\n"
-        "lsl x19, x1, x0\n"
-        "lsl x20, x1, x0\n"
-        "lsl x21, x1, x0\n"
-        "lsl x22, x1, x0\n"
-        "lsl x23, x1, x0\n"
-        "lsl x24, x1, x0\n"
-        "lsl x25, x1, x0\n"
+
+        "eor x2,  x1, x0\n"
+        "eor x3,  x1, x0\n"
+        "eor x4,  x1, x0\n"
+        "eor x5,  x1, x0\n"
+        "eor x6,  x1, x0\n"
+        "eor x7,  x1, x0\n"
+        "eor x8,  x1, x0\n"
+        "eor x9,  x1, x0\n"
+        "eor x10, x1, x0\n"
+        "eor x11, x1, x0\n"
+        "eor x12, x1, x0\n"
+        "eor x13, x1, x0\n"
+        "eor x14, x1, x0\n"
+        "eor x15, x1, x0\n"
+        "eor x16, x1, x0\n"
+        "eor x17, x1, x0\n"
+        "eor x18, x1, x0\n"
+        "eor x19, x1, x0\n"
+        "eor x20, x1, x0\n"
+        "eor x21, x1, x0\n"
+        "eor x22, x1, x0\n"
+        "eor x23, x1, x0\n"
+        "eor x24, x1, x0\n"
+        "eor x25, x1, x0\n"
+        "eor x27, x1, x0\n"
+        "eor x28, x1, x0\n"
+        "eor x29, x1, x0\n"
+        "eor x30, x1, x0\n"
         "b loop\n"
         :
         : "r"(count), "r"(my_uint64)
         :   "x2","x3","x4","x5","x6","x7","x8","x9","x10","x11",
             "x12","x13","x14","x15","x16","x17","x18","x19","x20",
-            "x21","x22","x23","x24","x25"
+            "x21","x22","x23","x24","x25", "x26", "x27", "x28", "x29", "x30"    
     );
 
     return 0;
@@ -86,7 +91,6 @@ static __attribute__((noinline)) int monitor(void *in)
     struct args_t *arg = (struct args_t *)in;
 
     // Pin monitor to a single CPU
-    // NOTE: your new util library exposes pin_to_core(int). Use that instead of pin_cpu.
     pin_to_core(attacker_core_ID);
     int mb = mbox_open();
 
@@ -121,9 +125,9 @@ static __attribute__((noinline)) int monitor(void *in)
 
         // Adds about 0.014 seconds
 		//energy = read_power(mb); // adds around 0.00374 seconds on average
-        double hz = read_hz(mb); // adds 0.011 seconds
-		//double hz = get_cpu_freq_hz(0); 
+        //double hz = read_hz(mb); // adds 0.011 seconds
         time += (double)(start_vc - prev_vc)/(double) cntfrq;
+		double hz = (double)(start_cc - prev_cc)/((double)(start_vc - prev_vc)/(double) cntfrq); 
         
         fprintf(output_file, "%.15f %.15f\n", hz, time);
 	
@@ -206,7 +210,7 @@ int main(int argc, char *argv[])
 #if (SLEEP == 1)
         // Cool down
 	    printf("Cooling...\n");
-        
+        sleep(60);
 #endif
 
         // Start victim threads

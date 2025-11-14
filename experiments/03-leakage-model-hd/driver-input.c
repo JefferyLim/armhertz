@@ -145,11 +145,15 @@ static __attribute__((noinline)) int monitor(void *in)
 		start_vc = read_cntvct_el0();
 
         // Adds about 0.014 seconds
-		energy = read_power(mb); // adds around 0.00374 seconds on average
-        hz = read_hz(mb); // adds 0.011 seconds
-		//double hz = get_cpu_freq_hz(0); 
-        time += (double)(start_vc - prev_vc)/(double) cntfrq;
-        
+		energy = read_power(mb); // Adds around 0.00374 seconds on average
+        //hz = read_hz(mb); // Adds 0.011 seconds
+		uint64_t delta_cc = start_cc - prev_cc;
+		uint64_t delta_vc = start_vc - prev_vc;
+        time += (double)(delta_vc)/(double) cntfrq;
+
+		/* frequency (Hz) = (delta_cc / delta_vc) * cntfrq */
+		hz = ((double)delta_cc / (double)delta_vc) * (double)cntfrq;
+
         fprintf(output_file, "%.15f %.15f %.15f\n", energy, hz, time);
 	
 		// Save current

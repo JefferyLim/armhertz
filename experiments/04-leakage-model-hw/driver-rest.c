@@ -168,38 +168,40 @@ static __attribute__((noinline)) int monitor(void *in)
 	if (output_file == NULL) {
 		perror("output file");
 	}
-    
-    // Prepare
-    // uint64_t start_cc = read_pmccntr_el0();
-    // uint64_t start_vc = read_cntvct_el0();
-    // uint64_t prev_cc = start_cc;
-    // uint64_t prev_vc = start_vc;
-    // uint64_t cntfrq = read_cntfrq_el0();
-	
+
+	// Prepare
+    uint64_t start_cc = read_pmccntr_el0();
+    uint64_t start_vc = read_cntvct_el0();
+    uint64_t prev_cc = start_cc;
+    uint64_t prev_vc = start_vc;
+    uint64_t cntfrq = read_cntfrq_el0();
+	double energy, hz;
+    double time = 0;
     struct timespec ts = {0, TIME_BETWEEN_MEASUREMENTS};
 
     // Collect measurements
     for (uint64_t i = 0; i < arg->iters; i++) {
         // Wait before next measurement
         nanosleep(&ts, NULL);
-
         // Collect measurement
-		// start_cc = read_pmccntr_el0();
-		// start_vc = read_cntvct_el0();
+		start_cc = read_pmccntr_el0();
+		start_vc = read_cntvct_el0();
 
-		energy = read_power(mb);
+        // Adds about 0.014 seconds
+		energy = read_power(mb); // Adds around 0.00374 seconds on average
+        //hz = read_hz(mb); // Adds 0.011 seconds
+		uint64_t delta_cc = start_cc - prev_cc;
+		uint64_t delta_vc = start_vc - prev_vc;
+        time += (double)(delta_vc)/(double) cntfrq;
 
-		// Store measurement
-        // uint64_t cc_delta = start_cc - prev_cc;
-        // uint64_t vc_delta = start_vc - prev_vc;
-        // double hz =((double) cc_delta / (double) vc_delta * (double) cntfrq);
+		/* frequency (Hz) = (delta_cc / delta_vc) * cntfrq */
+		hz = ((double)delta_cc / (double)delta_vc) * (double)cntfrq;
 
-		double hz = read_hz(mb);
-        fprintf(output_file, "%.15f %.15f\n", energy, hz);
+        fprintf(output_file, "%.15f %.15f %.15f\n", energy, hz, time);
 	
 		// Save current
-		// prev_cc = start_cc;
-		// prev_vc = start_vc;
+		prev_cc = start_cc;
+		prev_vc = start_vc;
 	}
 
 	// Clean up
