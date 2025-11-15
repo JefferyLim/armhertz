@@ -115,14 +115,24 @@ static void disable_pmu(void *info)
 
 static int __init enable_el0_counters_init(void)
 {
-    smp_call_function(enable_pmu, NULL, 1);  // Run on all CPUs
-    pr_info("EL0 PMU and cycle counter enabled on all CPUs\n");
+
+            int cpu;
+	for_each_online_cpu(cpu){
+	smp_call_function(enable_pmu, NULL, 1);  // Run on all CPUs
+	}
+    
+	pr_info("EL0 PMU and cycle counter enabled on all CPUs\n");
     return 0;
 }
 
 static void __exit disable_el0_counters_exit(void)
 {
+
+	        int cpu;
+		for_each_online_cpu(cpu){
     smp_call_function(disable_pmu, NULL, 1);  // Run on all CPUs
+					   
+		}
     pr_info("EL0 PMU and cycle counter disabled on all CPUs\n");
 }
 
