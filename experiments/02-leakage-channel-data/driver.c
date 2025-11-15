@@ -52,34 +52,34 @@ static __attribute__((noinline)) int victim(void *varg)
         ".p2align 6\n"
         "loop:\n"
 
-        "add x2,  x1, x0\n"
-        "add x3,  x1, x0\n"
-        "add x4,  x1, x0\n"
-        "add x5,  x1, x0\n"
-        "add x6,  x1, x0\n"
-        "add x7,  x1, x0\n"
-        "add x8,  x1, x0\n"
-        "add x9,  x1, x0\n"
-        "add x10, x1, x0\n"
-        "add x11, x1, x0\n"
-        "add x12, x1, x0\n"
-        "add x13, x1, x0\n"
-        "add x14, x1, x0\n"
-        "add x15, x1, x0\n"
-        "add x16, x1, x0\n"
-        "add x17, x1, x0\n"
-        "add x18, x1, x0\n"
-        "add x19, x1, x0\n"
-        "add x20, x1, x0\n"
-        "add x21, x1, x0\n"
-        "add x22, x1, x0\n"
-        "add x23, x1, x0\n"
-        "add x24, x1, x0\n"
-        "add x25, x1, x0\n"
-        "add x27, x1, x0\n"
-        "add x28, x1, x0\n"
-        "add x29, x1, x0\n"
-        "add x30, x1, x0\n"
+        "orr x2,  x1, x0\n"
+        "orr x3,  x1, x0\n"
+        "orr x4,  x1, x0\n"
+        "orr x5,  x1, x0\n"
+        "orr x6,  x1, x0\n"
+        "orr x7,  x1, x0\n"
+        "orr x8,  x1, x0\n"
+        "orr x9,  x1, x0\n"
+        "orr x10, x1, x0\n"
+        "orr x11, x1, x0\n"
+        "orr x12, x1, x0\n"
+        "orr x13, x1, x0\n"
+        "orr x14, x1, x0\n"
+        "orr x15, x1, x0\n"
+        "orr x16, x1, x0\n"
+        "orr x17, x1, x0\n"
+        "orr x18, x1, x0\n"
+        "orr x19, x1, x0\n"
+        "orr x20, x1, x0\n"
+        "orr x21, x1, x0\n"
+        "orr x22, x1, x0\n"
+        "orr x23, x1, x0\n"
+        "orr x24, x1, x0\n"
+        "orr x25, x1, x0\n"
+        "orr x27, x1, x0\n"
+        "orr x28, x1, x0\n"
+        "orr x29, x1, x0\n"
+        "orr x30, x1, x0\n"
         "b loop\n"
         :
         : "r"(count), "r"(my_uint64)
@@ -125,7 +125,7 @@ static __attribute__((noinline)) int monitor(void *in)
     // Collect measurements
     for (uint64_t i = 0; i < arg->iters; i++) {
         // Wait before next measurement
-        nanosleep(&ts, NULL);
+        	nanosleep(&ts, NULL);
         // Collect measurement
 		start_cc = read_pmccntr_el0();
 		start_vc = read_cntvct_el0();
@@ -219,16 +219,7 @@ int main(int argc, char *argv[])
 	printf("Cooling...\n");
         sleep(60);
 #else
-
-		pthread_t thread1;
-		char cpu_mask[16], command[256];
-		sprintf(command, "stress-ng -q --cpu %d -t 30s", ntasks);
-		pthread_create(&thread1, NULL, (void *)&stress, (void *)command);
-		// Wait for monitor to be done
-		pthread_join(thread1, NULL);
-
-		// Stop stress
-		system("pkill -f stress-ng");
+	warmup();
 #endif
 
 	printf("Starting...\n");

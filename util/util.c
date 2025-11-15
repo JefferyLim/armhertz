@@ -12,6 +12,64 @@
 #include <sched.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <pthread.h>
+
+struct args_t {
+    uint64_t iters;
+    int selector;
+};
+
+// Runs the given command
+static void stress(void *command)
+{
+	system((char *)command);
+}
+static __attribute__((noinline)) int monitor(void *in)
+{
+    	int mb = mbox_open();
+		
+	double temp;
+	char result_buf[UTIL_MAX_STRING] = {};
+  	
+        struct timespec ts = {0,500000};
+	while(1){
+	        nanosleep(&ts, NULL);
+	    	gencmd(mb, "measure_temp", result_buf, sizeof result_buf);
+    		temp = get_vcgencmd_value(result_buf);
+		if(temp >= 85.0){
+			struct timespec th = {10, 0};	
+			nanosleep(&th, NULL);		
+			mbox_close(mb);
+			return 0;
+	
+		}
+
+	}	
+	
+}
+
+
+void warmup(){
+
+    struct args_t arg;
+		pthread_t thread1, thread2;
+		char cpu_mask[16], command[256];
+		sprintf(command, "stress-ng -q --cpu %d -t 10m", 4);
+		pthread_create(&thread1, NULL, (void *)&stress, (void *)command);
+		// Wait for monitor to be done
+
+		// Start monitor
+		pthread_create(&thread2, NULL, (void *)&monitor, (void *)&arg);
+
+		// Wait for monitor to be done
+		pthread_join(thread2, NULL);
+
+		// Stop stress
+		system("pkill -f stress-ng");
+
+		pthread_join(thread1, NULL);
+
+}
 
 /* Internal helper for mailbox ioctl */
 static int mbox_property(int file_desc, void *buf)

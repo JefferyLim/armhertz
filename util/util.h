@@ -80,6 +80,10 @@ double read_power(int fd);
 
 double read_hz(int fd);
 
+
+void warmup();
+
+
 #ifdef __cplusplus
 }
 #endif

@@ -166,9 +166,13 @@ void read_pmic_adc(int mb) {
     const char *pmic_commands[] = {
         "pmic_read_adc 3V7_WL_SW_A",
         "pmic_read_adc 3V3_SYS_A",
+        "pmic_read_adc 3V3_SYS_V",
         "pmic_read_adc 1V8_SYS_A",
+        "pmic_read_adc 1V8_SYS_V",
         "pmic_read_adc 1V1_SYS_A",
+        "pmic_read_adc 1V1_SYS_V",
         "pmic_read_adc 0V8_SW_A",
+        "pmic_read_adc 0V8_SW_V",
         "pmic_read_adc VDD_CORE_A",
         "pmic_read_adc VDD_CORE_V",
     };
