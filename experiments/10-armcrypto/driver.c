@@ -47,8 +47,8 @@ static __attribute__((noinline)) int victim(void *varg)
     // goal is to see if we can detect a difference between the two
     uint8_t *block = sel ? block_rand : block_zero;
 
-    uint8x16_t key = vdupq_n_u8(0x42);
-    uint8x16_t state = vld1q_u8(block);
+    volatile uint8x16_t key = vdupq_n_u8(0xFF);
+    volatile uint8x16_t state = vld1q_u8(block);
 
     // Infinite AES workload
     for (;;) {
@@ -176,6 +176,9 @@ int main(int argc, char *argv[])
                         MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
     for (int round = 0; round < outer * num_sel; round++) {
+	
+	warmup();
+
 
         arg.selector = selectors[round % num_sel];
 

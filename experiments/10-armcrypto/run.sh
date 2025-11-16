@@ -8,8 +8,8 @@ TOTAL_PHYSICAL_CORES=4
 TOTAL_LOGICAL_CORES=4
 
 # Setup
-samples=10000	    # 30 seconds (1 ms + 14 ms )
-outer=5			# 30 reps
+samples=40000	    # 30 seconds (1 ms + 14 ms )
+outer=20			# 30 reps
 num_thread=$TOTAL_LOGICAL_CORES
 date=`date +"%m%d-%H%M"`
 
@@ -17,7 +17,7 @@ date=`date +"%m%d-%H%M"`
 echo "This script will take about $(((30)*$outer*3/60+10)) minutes. Reduce 'outer' if you want a shorter run."
 
 # Warmup
-stress-ng -q --cpu $TOTAL_LOGICAL_CORES -t 10m
+#stress-ng -q --cpu $TOTAL_LOGICAL_CORES -t 10m
 
 # Run
 sudo rm -rf out
