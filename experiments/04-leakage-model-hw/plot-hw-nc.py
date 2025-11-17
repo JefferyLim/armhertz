@@ -74,6 +74,8 @@ def main():
     # plt.legend(fontsize=7)
     plt.tight_layout(pad=0.1)
     plt.savefig("./plot/" + "freq.pdf", dpi=300)
+    plt.show()
+    plt.close()
 
 
     x = list(set(xlabels))
@@ -88,6 +90,8 @@ def main():
     # plt.legend(fontsize=7)
     plt.tight_layout(pad=0.1)
     plt.savefig("./plot/" + "energy.pdf", dpi=300)
+    plt.show()
+    plt.close()
 
 
 if __name__ == "__main__":

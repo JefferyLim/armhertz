@@ -46,8 +46,6 @@ def main():
     # Find files
     all_files = sorted(glob.glob(os.path.join(in_dir, "all_*")), reverse=True)
    
-
-
     freqs = {}
     energys = {}
     times = {}
@@ -81,104 +79,117 @@ def main():
         freqs[label].append(freq)
         times[label].append(time)
         
+    data = {
+        "A": {},
+        "B": {},
+        "C": {},
+        "D": {}
+    }
+
+    # Convert your dictionary of raw arrays into mean/std format
+    for (A_, B_, C_, D_), freq_list in freqs.items():
+
+        # Identify categories based on (hw_first=A_, shift_first=C_)
+        if A_ == 16 and C_ == 0:
+            key = "A"
+        elif A_ == 16 and C_ == 48:
+            key = "B"
+        elif A_ == 32 and C_ == 0:
+            key = "C"
+        elif A_ == 32 and C_ == 32:
+            key = "D"
+        else:
+            continue    # ignore non-matching cases
+
+        # Combine repetitions → one long sample vector
+        combined = np.concatenate(freq_list)
+
+        mean = np.mean(combined)
+        std = np.std(combined)
+
+        # Store under: data[key][hw_second = B_] = (mean, std)
+        data[key][B_] = (mean, std)
+
+
+    #############################
+    # FREQUENCY PLOT (GHz)
+    #############################
+
+    plt.figure(figsize=(3, 2))
+
+    for letter in data:
+        x, y = [], []
+        for hw_second in sorted(data[letter].keys()):
+            mean_val = data[letter][hw_second][0] / 1000.0  # MHz → GHz
+            x.append(hw_second)
+            y.append(mean_val)
+        plt.scatter(x, y, label=letter, s=3)
+
+    plt.xlabel('HW of SECOND')
+    plt.ylabel('Frequency (GHz)')
+    plt.legend(fontsize=7)
+    plt.tight_layout(pad=0.1)
+    plt.savefig("./plot/freq_ABCD.pdf", dpi=300)
+    plt.show()
+    plt.clf()
+
+
+
+    ###############################################
+    # ENERGY-TO-POWER VERSION (raw → W)
+    ###############################################
+
+    data = {
+        "A": {},
+        "B": {},
+        "C": {},
+        "D": {}
+    }
+
+    for (A_, B_, C_, D_), energy_list in energys.items():
+
+        if A_ == 16 and C_ == 0:
+            key = "A"
+        elif A_ == 16 and C_ == 48:
+            key = "B"
+        elif A_ == 32 and C_ == 0:
+            key = "C"
+        elif A_ == 32 and C_ == 32:
+            key = "D"
+        else:
+            continue
+
+        combined = np.concatenate(energy_list)
+
+        power_samples = combined
+
+        mean = np.mean(power_samples)
+        std = np.std(power_samples)
+
+        data[key][B_] = (mean, std)
+
+
+    #############################
+    # POWER PLOT (W)
+    #############################
+
+    plt.figure(figsize=(3, 2))
+
+    for letter in data:
+        x, y = [], []
+        for hw_second in sorted(data[letter].keys()):
+            mean_val = data[letter][hw_second][0]
+            x.append(hw_second)
+            y.append(mean_val)
+        plt.scatter(x, y, label=letter, s=3)
+
+    plt.xlabel('HW of SECOND')
+    plt.ylabel('Power (W)')
+    plt.legend(fontsize=7)
+    plt.tight_layout(pad=0.1)
+    plt.savefig("./plot/power_ABCD.pdf", dpi=300)
+    plt.show()
+    plt.clf()
         
-        
-if __name__ == "__main__":
-    main()
-
-
-
-def main():
-
-    # Prepare output directory
-    try:
-        os.makedirs('plot')
-    except:
-        pass
-
-    # Parse arguments
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--freq')
-    parser.add_argument('--energy')
-    parser.add_argument('figname')
-    args = parser.parse_args()
-    freq_file = args.freq
-    energy_file = args.energy
-
-    if (freq_file):
-        data = {}
-        with open(freq_file + "/frequency.txt") as f:
-            for line in f:
-                selector, mean, std = line.strip().split()
-                selectors = selector.split("_")
-                hw_first, hw_second, shift_first = int(selectors[0]), int(selectors[1]), int(selectors[2])
-
-                if hw_first == 16 and shift_first == 0:
-                    data.setdefault("A", {})
-                    data["A"][hw_second] = (int(mean), int(std))
-                if((hw_first == 16) and (shift_first == 48)):
-                    data.setdefault("B", {})
-                    data["B"][hw_second] = (int(mean), int(std))
-                if((hw_first == 32) and (shift_first == 0)):
-                    data.setdefault("C", {})
-                    data["C"][hw_second] = (int(mean), int(std))
-                if((hw_first == 32) and (shift_first == 32)):
-                    data.setdefault("D", {})
-                    data["D"][hw_second] = (int(mean), int(std))
-
-        plt.figure(figsize=(3, 2))
-
-        for letter in data:
-            x, y = [], []
-            for hamming in data[letter]:
-                x.append(hamming)
-                y.append(data[letter][hamming][0] / 1000000)  # / 1000000 is to convert to GHz
-            plt.scatter(x, y, label=letter, s=3)
-
-        plt.xlabel('HW of SECOND')
-        plt.ylabel('Frequency (GHz)')
-        plt.legend(fontsize=7)
-        plt.tight_layout(pad=0.1)
-        plt.savefig("./plot/" + args.figname + ".pdf", dpi=300)
-        plt.clf()
-
-    if (energy_file):
-        data = {}
-        with open(energy_file + "/energy.txt") as f:
-            for line in f:
-                selector, mean, std = line.strip().split()
-                selectors = selector.split("_")
-                hw_first, hw_second, shift_first = int(selectors[0]), int(selectors[1]), int(selectors[2])
-
-                if hw_first == 16 and shift_first == 0:
-                    data.setdefault("A", {})
-                    data["A"][hw_second] = (float(mean), float(std))
-                if((hw_first == 16) and (shift_first == 48)):
-                    data.setdefault("B", {})
-                    data["B"][hw_second] = (float(mean), float(std))
-                if((hw_first == 32) and (shift_first == 0)):
-                    data.setdefault("C", {})
-                    data["C"][hw_second] = (float(mean), float(std))
-                if((hw_first == 32) and (shift_first == 32)):
-                    data.setdefault("D", {})
-                    data["D"][hw_second] = (float(mean), float(std))
-
-        plt.figure(figsize=(3, 2))
-
-        for letter in data:
-            x, y = [], []
-            for hamming in data[letter]:
-                x.append(hamming)
-                y.append(data[letter][hamming][0] / 0.001)		# 0.001 is to convert to power since we sample energy every 1ms
-            plt.scatter(x, y, label=letter, s=3)
-
-        plt.xlabel('HW of SECOND')
-        plt.ylabel('Power (W)')
-        plt.legend(fontsize=7)
-        plt.tight_layout(pad=0.1)
-        plt.savefig("./plot/" + args.figname + ".pdf", dpi=300)
-        plt.clf()
-
-
 if __name__ == "__main__":
     main()

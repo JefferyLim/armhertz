@@ -70,10 +70,12 @@ def main():
     plt.figure(figsize=(3, 2))
     plt.scatter(x, y, s=3)
     plt.xlabel('COUNT')
-    plt.ylabel('Frequency (GHz)')
+    plt.ylabel('Mean Frequency (GHz)')
     # plt.legend(fontsize=7)
     plt.tight_layout(pad=0.1)
     plt.savefig("./plot/" + "freq.pdf", dpi=300)
+    plt.show()
+    plt.close()
 
 
     x = list(set(xlabels))
@@ -83,10 +85,12 @@ def main():
     plt.figure(figsize=(3, 2))
     plt.scatter(x, y, s=3)
     plt.xlabel('COUNT')
-    plt.ylabel('Power (W)')
+    plt.ylabel('Mean Power (W)')
     # plt.legend(fontsize=7)
     plt.tight_layout(pad=0.1)
     plt.savefig("./plot/" + "energy.pdf", dpi=300)
+    plt.show()
+    plt.close()
 
 
 if __name__ == "__main__":
