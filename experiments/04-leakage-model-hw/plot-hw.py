@@ -1,18 +1,33 @@
-import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
+import os
+import glob
 import argparse
 import numpy as np
-import os
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 import copy
 
-
 def bitfield(n):
-    bit_list = [int(digit) for digit in bin(n)[2:]]  # [2:] to chop off the "0b" part
-    if(len(bit_list) < 8):
-        for x in range(8 - len(bit_list)):
+    bit_list = [int(digit) for digit in bin(n)[2:]] # [2:] to chop off the "0b" part
+    if len(bit_list) < 8:
+        for _ in range(8 - len(bit_list)):
             bit_list.insert(0, 0)
     return bit_list
 
+def parse_file(fn):
+
+    energy = []
+    freq = []
+    time = []
+    with open(fn) as f:
+        for line in f:
+            c = line.strip().split()
+            if len(c) >= 3:
+                energy.append(float(c[0]))
+                # the freq in your parse_file was converted from Hz -> MHz already
+                freq.append(float(c[1]) / 1e6)   # Hz → MHz
+                time.append(float(c[2]))         # seconds
+
+    return np.array(energy), np.array(freq), np.array(time)
 
 def main():
 
@@ -21,163 +36,52 @@ def main():
         os.makedirs('plot')
     except:
         pass
-
-    # Parse arguments
+        
     parser = argparse.ArgumentParser()
-    parser.add_argument('--freq')
-    parser.add_argument('--energy')
-    parser.add_argument('figname')
+    parser.add_argument('folder')
     args = parser.parse_args()
-    freq_file = args.freq
-    energy_file = args.energy
 
-    if (freq_file):
-        data = {}
-        with open(freq_file + "/frequency.txt") as f:
-            for line in f:
-                selector, mean, std = line.strip().split()
-                hw_left, shift_left = selector.split("_")[0], selector.split("_")[2]
-                data.setdefault(int(hw_left), {})
-                data[int(hw_left)][int(shift_left)] = (int(mean), int(std))
+    in_dir = args.folder
 
-        if 100 in data:
-            independence = {}
-            for x in range(256):
-                all_bytes = bitfield(x)
-                for byte in range(8):
-                    seven_bytes = copy.deepcopy(all_bytes)
-                    seven_bytes.pop(byte)
-                    seven_bytes = tuple(seven_bytes)
-                    independence.setdefault(byte, {})
-                    independence[byte].setdefault(seven_bytes, {})
-                    if (all_bytes[byte] == 0):
-                        independence[byte][seven_bytes][0] = data[x+100][0]
-                    else:
-                        independence[byte][seven_bytes][1] = data[x+100][0]
-
-            byte_mean = {}
-            byte_std = {}
-            for byte in independence:
-                deltas = []
-                for seven_bytes in independence[byte]:
-                    deltas.append(independence[byte][seven_bytes][1][0] - independence[byte][seven_bytes][0][0])
-
-                deltas.sort()
-                deltas_filtered = deltas[10:-10]
-                byte_mean[byte] = np.mean(deltas_filtered)
-                byte_std[byte] = np.std(deltas_filtered)
-
-            key, mean, std = [], [], []
-            for x in byte_mean:
-                key.append(7 - x)
-                mean.append(byte_mean[x] / 1000000)  # / 1000000 is to convert to GHz
-                std.append(byte_std[x] / 1000000)  # / 1000000 is to convert to GHz
-
-            plt.figure(figsize=(3, 2))
-            plt.errorbar(key, mean, yerr=std, fmt='o', ms=3)
-            plt.xlabel('Byte index')
-            plt.ylabel('Δ Frequency (GHz)')
-            plt.gca().xaxis.set_major_locator(ticker.MultipleLocator(1))
-            plt.tight_layout(pad=0.1)
-            plt.savefig("./plot/" + args.figname + "-independence.pdf", dpi=300)
-            plt.clf()
-
-        plt.figure(figsize=(3, 2))
-
-        x, y = [], []
-        for hamming in range(65):
-            if hamming in data:
-                x.append(hamming)
-                y.append(data[hamming][0][0] / 1000000)  # / 1000000 is to convert to GHz
-        plt.scatter(x, y, label="From LSB", s=3)
-
-        x, y = [], []
-        for hamming in range(65):
-            if hamming in data:
-                x.append(hamming)
-                y.append(data[hamming][64-hamming][0] / 1000000)  # / 1000000 is to convert to GHz
-        plt.scatter(x, y, label="From MSB", s=3)
-
-        plt.xlabel('Hamming weight')
-        plt.ylabel('Frequency (GHz)')
-        plt.legend(fontsize=7)
-        plt.tight_layout(pad=0.1)
-        plt.savefig("./plot/" + args.figname + ".pdf", dpi=300)
-        plt.clf()
-
-    if (energy_file):
-        data = {}
-        with open(energy_file + "/energy.txt") as f:
-            for line in f:
-                selector, mean, std = line.strip().split()
-                hw_left, shift_left = selector.split("_")[0], selector.split("_")[2]
-                data.setdefault(int(hw_left), {})
-                data[int(hw_left)][int(shift_left)] = (float(mean), float(std))
-
-        independence = {}
-        for x in range(256):
-            all_bytes = bitfield(x)
-            for byte in range(8):
-                seven_bytes = copy.deepcopy(all_bytes)
-                seven_bytes.pop(byte)
-                seven_bytes = tuple(seven_bytes)
-                independence.setdefault(byte, {})
-                independence[byte].setdefault(seven_bytes, {})
-                if (all_bytes[byte] == 0):
-                    independence[byte][seven_bytes][0] = data[x+100][0]
-                else:
-                    independence[byte][seven_bytes][1] = data[x+100][0]
-
-        byte_mean = {}
-        byte_std = {}
-        for byte in independence:
-            deltas = []
-            for seven_bytes in independence[byte]:
-                deltas.append(independence[byte][seven_bytes][1][0] - independence[byte][seven_bytes][0][0])
-
-            deltas.sort()
-            deltas_filtered = deltas[10:-10]
-            byte_mean[byte] = np.mean(deltas_filtered)
-            byte_std[byte] = np.std(deltas_filtered)
-
-        key, mean, std = [], [], []
-        for x in byte_mean:
-            key.append(7 - x)
-            mean.append(byte_mean[x] / 0.001)		# 0.001 is to convert to power since we sample energy every 1ms
-            std.append(byte_std[x] / 0.001)		# 0.001 is to convert to power since we sample energy every 1ms
-
-        plt.figure(figsize=(3, 2))
-        plt.errorbar(key, mean, yerr=std, fmt='o', ms=3)
-        plt.xlabel('Byte index')
-        plt.ylabel('Δ Power (W)')
-        plt.gca().xaxis.set_major_locator(ticker.MultipleLocator(1))
-        plt.tight_layout(pad=0.1)
-        plt.savefig("./plot/" + args.figname + "-independence.pdf", dpi=300)
-        plt.clf()
-
-        plt.figure(figsize=(3, 2))
-
-        x, y = [], []
-        for hamming in range(65):
-            if hamming in data:
-                x.append(hamming)
-                y.append(data[hamming][0][0] / 0.001)		# 0.001 is to convert to power since we sample energy every 1ms
-        plt.scatter(x, y, label="From LSB", s=3)
-
-        x, y = [], []
-        for hamming in range(65):
-            if hamming in data:
-                x.append(hamming)
-                y.append(data[hamming][64-hamming][0] / 0.001)		# 0.001 is to convert to power since we sample energy every 1ms
-        plt.scatter(x, y, label="From MSB", s=3)
-
-        plt.xlabel('Hamming weight')
-        plt.ylabel('Power (W)')
-        plt.legend(fontsize=7)
-        plt.tight_layout(pad=0.1)
-        plt.savefig("./plot/" + args.figname + ".pdf", dpi=300)
-        plt.clf()
+    # Find files
+    all_files = sorted(glob.glob(os.path.join(in_dir, "all_*")), reverse=True)
+   
 
 
+    freqs = {}
+    energys = {}
+    times = {}
+    meta = {}       # optional: stores parsed (A,B,C,D)
+    
+    for f in all_files:
+        base = os.path.splitext(os.path.basename(f))[0]
+        _, A, B, C, D, rept = base.split("_")
+        
+        # parse file data
+        energy, freq, time = parse_file(f)
+
+        A = int(A)
+        B = int(B)
+        C = int(C)
+        D = int(D)
+        rept = int(rept)
+
+        label = (A, B, C, D)     # unique 4-field key
+        
+        
+        # Allocate lists if needed
+        if label not in energys:
+            energys[label] = []
+            freqs[label] = []
+            times[label] = []
+            meta[label] = (A, B, C, D)
+
+        # Append raw unprocessed arrays
+        energys[label].append(energy)
+        freqs[label].append(freq)
+        times[label].append(time)
+        
+        
+        
 if __name__ == "__main__":
     main()
