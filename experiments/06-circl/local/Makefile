@@ -1,7 +1,7 @@
 CC:= gcc
-CFLAGS:= -O3 -D_POSIX_SOURCE -D_GNU_SOURCE -m64 -falign-functions=64 -Wno-unused-result -Wall
+CFLAGS:= -O3 -D_POSIX_SOURCE -D_GNU_SOURCE -falign-functions=64 -Wno-unused-result -Wall
 LIBS:= -lpthread -lrt -lm
-UTILS:= ../../util/util.o ../../util/msr-utils.o ../../util/rapl-utils.o ../../util/freq-utils.o
+UTILS:= ../../../util/util.o
 
 all: obj bin out data driver
 
@@ -25,6 +25,6 @@ data:
 	
 clean:
 	rm -rf bin obj out
-	rm -rf ../util/*.o
+	rm -rf ../../../util/*.o
 
 .PHONY: all clean

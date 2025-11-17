@@ -1,7 +1,22 @@
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <sched.h>
+#include <inttypes.h>
+#include <unistd.h>
+#include <sys/mman.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <sys/resource.h>
-
-#include "../../util/freq-utils.h"
-#include "../../util/rapl-utils.h"
+#include <sys/syscall.h>
+#include <sys/wait.h>
+#include <signal.h>
+#include <time.h>
+#include <math.h>
+#include <sys/resource.h>
+#include <pthread.h>
+#include <string.h>
 #include "../../util/util.h"
 
 volatile static int attacker_core_ID;
@@ -30,8 +45,9 @@ static __attribute__((noinline)) int monitor(void *in)
 	struct args_t *arg = (struct args_t *)in;
 
 	// Pin monitor to a single CPU
-	pin_cpu(attacker_core_ID);
-
+	pin_to_core(attacker_core_ID);
+    int mb = mbox_open();
+    
 	// Set filename
 	// The format is, e.g., ./out/all_02_2330.out
 	// where 02 is the selector and 2330 is an index to prevent overwriting files
@@ -46,28 +62,38 @@ static __attribute__((noinline)) int monitor(void *in)
 	}
 
 	// Prepare
-	double energy, prev_energy = rapl_msr(attacker_core_ID, PP0_ENERGY);
-	struct freq_sample_t freq_sample, prev_freq_sample = frequency_msr_raw(attacker_core_ID);
+    uint64_t start_cc = read_pmccntr_el0();
+    uint64_t start_vc = read_cntvct_el0();
+    uint64_t prev_cc = start_cc;
+    uint64_t prev_vc = start_vc;
+    uint64_t cntfrq = read_cntfrq_el0();
+	double energy, hz;
+    double time = 0;
+    struct timespec ts = {0, TIME_BETWEEN_MEASUREMENTS};
 
-	// Collect measurements
-	for (uint64_t i = 0; i < arg->iters; i++) {
+    // Collect measurements
+    for (uint64_t i = 0; i < arg->iters; i++) {
+        // Wait before next measurement
+        nanosleep(&ts, NULL);
+        // Collect measurement
+		start_cc = read_pmccntr_el0();
+		start_vc = read_cntvct_el0();
 
-		// Wait before next measurement
-		nanosleep((const struct timespec[]){{0, TIME_BETWEEN_MEASUREMENTS}}, NULL);
+        // Adds about 0.014 seconds
+		energy = read_power(mb); // Adds around 0.00374 seconds on average
+        //hz = read_hz(mb); // Adds 0.011 seconds
+		uint64_t delta_cc = start_cc - prev_cc;
+		uint64_t delta_vc = start_vc - prev_vc;
+        time += (double)(delta_vc)/(double) cntfrq;
 
-		// Collect measurement
-		energy = rapl_msr(attacker_core_ID, PP0_ENERGY);
-		freq_sample = frequency_msr_raw(attacker_core_ID);
+		/* frequency (Hz) = (delta_cc / delta_vc) * cntfrq */
+		hz = ((double)delta_cc / (double)delta_vc) * (double)cntfrq;
 
-		// Store measurement
-		uint64_t aperf_delta = freq_sample.aperf - prev_freq_sample.aperf;
-		uint64_t mperf_delta = freq_sample.mperf - prev_freq_sample.mperf;
-		uint32_t khz = (maximum_frequency * aperf_delta) / mperf_delta;
-		fprintf(output_file, "%.15f %" PRIu32 "\n", energy - prev_energy, khz);
-
+        fprintf(output_file, "%.15f %.15f %.15f\n", energy, hz, time);
+	
 		// Save current
-		prev_energy = energy;
-		prev_freq_sample = freq_sample;
+		prev_cc = start_cc;
+		prev_vc = start_vc;
 	}
 
 	// Clean up
@@ -122,10 +148,6 @@ int main(int argc, char *argv[])
 
 	// Prepare up monitor/attacker
 	attacker_core_ID = 0;
-	set_frequency_units(attacker_core_ID);
-	frequency_msr_raw(attacker_core_ID);
-	set_rapl_units(attacker_core_ID);
-	rapl_msr(attacker_core_ID, PP0_ENERGY);
 
 	// Run experiment once for each selector
 	for (int i = 0; i < outer * num_selectors; i++) {
@@ -135,7 +157,9 @@ int main(int argc, char *argv[])
 		arg.keyindex = keyindex[i % num_selectors];
 		arg.bitindex = bitindex[i % num_selectors];
 		arg.number_thread = number_thread[i % num_selectors];
-
+        
+        warmup();
+        
 		// Prepare for experiments
 		pthread_t thread1, thread2;
 

@@ -58,8 +58,6 @@ echo 1 9 190 300 >> input.txt
 echo 0 10 270 300 >> input.txt
 echo 1 10 270 300 >> input.txt
 
-# Warm Up
-stress-ng -q --cpu $TOTAL_LOGICAL_CORES -t 10m
 
 # Run
 sudo ./bin/driver ${samples} ${outer}
