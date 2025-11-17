@@ -1,17 +1,20 @@
-CC:= gcc
+CC := gcc
 CFLAGS:= -O3 -march=armv8-a+crypto -D_POSIX_SOURCE -D_GNU_SOURCE -falign-functions=64 -Wall
-LIBS:= -lpthread -lrt -lm
-UTILS:= ../../util/util.o
+#CFLAGS := -O3 -D_POSIX_SOURCE -D_GNU_SOURCE -falign-functions=64 -Wall
+LIBS := -lpthread -lrt -lm
 
-all: obj bin out data driver driver_aes driver_aes_leak
+# Updated util library
+UTILS := ../../util/util.o
 
-driver: obj/driver.o $(UTILS)
+all: obj bin out data driver_aes_leak driver driver_aes
+
+driver_aes_leak: obj/driver_aes_leak.o $(UTILS)
 	$(CC) -o bin/$@ $^ $(LIBS)
 
 driver_aes: obj/driver_aes.o $(UTILS)
 	$(CC) -o bin/$@ $^ $(LIBS)
 
-driver_aes_leak: obj/driver_aes_leak.o $(UTILS)
+driver: obj/driver.o $(UTILS)
 	$(CC) -o bin/$@ $^ $(LIBS)
 
 obj/%.o: %.c
@@ -33,4 +36,3 @@ clean:
 	rm -rf bin obj out
 	rm -rf ../../util/*.o
 
-.PHONY: all clean

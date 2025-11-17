@@ -26,6 +26,7 @@ volatile static int attacker_core_ID = 0;
 #define TIME_BETWEEN_MEASUREMENTS 1000000L
 #define STACK_SIZE 8192
 
+
 struct args_t {
     uint64_t iters;
     int selector;
@@ -237,11 +238,12 @@ int main(int argc, char *argv[])
                         MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
     for (int round = 0; round < outer * num_sel; round++) {
-	
-	warmup();
-
 
         arg.selector = selectors[round % num_sel];
+   	 
+	printf("%d\n", round);
+	int a = warmup();
+	printf("%d\n", a);
 
         int tids[ntasks];
         for (int t = 0; t < ntasks; t++) {
