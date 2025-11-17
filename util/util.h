@@ -8,18 +8,16 @@
 extern "C" {
 #endif
 
-/* Constants */
 #define UTIL_DEVICE_FILE_NAME "/dev/vcio"
 #define UTIL_MAJOR_NUM 100
 #define UTIL_MAX_STRING 256
 
-/* IOCTL - same layout as your original code */
 #define UTIL_IOCTL_MBOX_PROPERTY _IOWR(UTIL_MAJOR_NUM, 0, char *)
 
 /* Global mailbox buffer (aligned for VideoCore) */
 extern unsigned gencmd_buffer[(UTIL_MAX_STRING >> 2) + 7];
 
-/* Open/close mailbox device. Returns file descriptor >=0 on success, -1 on error. */
+/* Open/close mailbox device. */
 int mbox_open(void);
 void mbox_close(int fd);
 
@@ -44,9 +42,9 @@ int gencmd(int fd, const char *command, char *result, size_t result_len);
 double get_vcgencmd_value(const char *buffer);
 
 /* Read performance / system counters (aarch64) */
-uint64_t read_pmccntr_el0(void);   /* PMCCNTR_EL0 (physical cycle counter) */
-uint64_t read_cntvct_el0(void);    /* CNTVCT_EL0 (virtual count) */
-uint64_t read_cntfrq_el0(void);    /* CNTFRQ_EL0 (counter frequency) */
+uint64_t read_pmccntr_el0(void);   // PMCCNTR_EL0 (physical cycle counter)
+uint64_t read_cntvct_el0(void);    // CNTVCT_EL0 (virtual count)
+uint64_t read_cntfrq_el0(void);    // CNTFRQ_EL0 (counter frequency)
 
 /*
  * Pin current thread to a CPU core.
@@ -59,7 +57,6 @@ int pin_to_core(int core_id);
  * Uses PMCCNTR_EL0 and CNTVCT_EL0 + nanosleep for a short interval.
  * Returns estimated frequency in Hz on success, negative on error.
  *
- * Note: function will call pin_to_core(core_id).
  */
 double get_cpu_freq_hz(int core_id);
 
@@ -76,11 +73,22 @@ double get_cpu_freq_hz(int core_id);
  */
 int read_pmic_adc(int fd, const char *commands[], size_t n_commands, double results[]);
 
+
+/*
+ * Quick function for reading power from vcgencmd
+ */
 double read_power(int fd);
 
+/*
+ * Quick function for reading freq from vcgencmd
+ */
 double read_hz(int fd);
 
 
+/*
+ * Function for warming up the processor to hit some "steady state"
+ * Uses stress-ng to push processor to specific temperature and then retursn 
+ */
 void warmup();
 
 

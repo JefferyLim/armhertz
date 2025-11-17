@@ -57,7 +57,6 @@ static void mbox_close(int file_desc) {
   close(file_desc);
 }
 
-
 #define GET_GENCMD_RESULT 0x00030080
 
 static unsigned gencmd(int file_desc, const char *command, char *result, int result_len)

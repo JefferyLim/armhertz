@@ -24,50 +24,50 @@ static void stress(void *command)
 {
 	system((char *)command);
 }
+
+/* Montitor thread for warmup */
 static __attribute__((noinline)) int monitor(void *in)
 {
-    	int mb = mbox_open();
+    int mb = mbox_open();
 		
 	double temp;
 	char result_buf[UTIL_MAX_STRING] = {};
   	
-        struct timespec ts = {0,500000};
+    // Check every 500 ms
+    struct timespec ts = {0,500000};
 	while(1){
-	        nanosleep(&ts, NULL);
-	    	gencmd(mb, "measure_temp", result_buf, sizeof result_buf);
-    		temp = get_vcgencmd_value(result_buf);
+        nanosleep(&ts, NULL);
+        gencmd(mb, "measure_temp", result_buf, sizeof result_buf);
+        temp = get_vcgencmd_value(result_buf);
+        // Measure temperature until we hit 85 C
 		if(temp >= 85.0){
-			struct timespec th = {10, 0};	
+			struct timespec th = {10, 0}; // Run for 10 more seconds for good measure
 			nanosleep(&th, NULL);		
 			mbox_close(mb);
 			return 0;
-	
 		}
-
 	}	
-	
 }
 
-
+/* Warmup function for tests */
 void warmup(){
-
     struct args_t arg;
-		pthread_t thread1, thread2;
-		char cpu_mask[16], command[256];
-		sprintf(command, "stress-ng -q --cpu %d -t 10m", 4);
-		pthread_create(&thread1, NULL, (void *)&stress, (void *)command);
-		// Wait for monitor to be done
+    pthread_t thread1, thread2;
+    char cpu_mask[16], command[256];
+    sprintf(command, "stress-ng -q --cpu %d -t 10m", 4);
+    pthread_create(&thread1, NULL, (void *)&stress, (void *)command);
+    // Wait for monitor to be done
 
-		// Start monitor
-		pthread_create(&thread2, NULL, (void *)&monitor, (void *)&arg);
+    // Start monitor
+    pthread_create(&thread2, NULL, (void *)&monitor, (void *)&arg);
 
-		// Wait for monitor to be done
-		pthread_join(thread2, NULL);
+    // Wait for monitor to be done
+    pthread_join(thread2, NULL);
 
-		// Stop stress
-		system("pkill -f stress-ng");
+    // Stop stress
+    system("pkill -f stress-ng");
 
-		pthread_join(thread1, NULL);
+    pthread_join(thread1, NULL);
 
 }
 
@@ -96,9 +96,11 @@ void mbox_close(int fd)
     if (fd >= 0) close(fd);
 }
 
-/* Implementation of gencmd - similar layout to your original code */
+// from:
+// https://github.com/raspberrypi/utils/blob/master/vcgencmd/vcgencmd.c
 int gencmd(int file_desc, const char *command, char *result, size_t result_len)
 {
+    // Removing comments to speed up measurement...
     //if (!command || !result || result_len == 0) return -1;
 
     //if (strlen(command) + 1 >= UTIL_MAX_STRING) return -1;
@@ -127,23 +129,21 @@ int gencmd(int file_desc, const char *command, char *result, size_t result_len)
     int ret = mbox_property(file_desc, p);
     if (ret < 0) return -1;
 
-    /* p[5] contains response length / status in your earlier usage */
-    /* Copy the response string (starts at p+6) into result (bounded) */
     result[0] = '\0';
     strncat(result, (const char *)(p + 6), result_len - 1);
 
-    return p[5]; /* return response code / length (same as earlier code) */
+    return p[5];
 }
 
 double get_vcgencmd_value(const char *buffer)
 {
     if (!buffer) return -1.0;
+    
     const char *eq = strchr(buffer, '=');
     if (!eq) return -1.0;
-    /* Use strtod for robust parsing */
     char *endptr = NULL;
     double v = strtod(eq + 1, &endptr);
-    if (endptr == eq + 1) return -1.0; /* no number parsed */
+    if (endptr == eq + 1) return -1.0;
     return v;
 }
 
@@ -214,6 +214,9 @@ double get_cpu_freq_hz(int core_id)
     return freq_hz;
 }
 
+/*
+ * gencmd + vcgencmd, but can use a list of commands
+ */
 int read_pmic_adc(int fd, const char *commands[], size_t n_commands, double results[])
 {
     if (fd < 0 || !commands || !results) return -1;
@@ -238,17 +241,22 @@ int read_pmic_adc(int fd, const char *commands[], size_t n_commands, double resu
 }
 
 
+
+/*
+ * Return power in Watts from vcgencmd from the VDD_CORE_
+ */
 double read_power(int fd){
     double volts, amps = 0.0;
     char result_buf[UTIL_MAX_STRING] = {};
-  
     gencmd(fd, "pmic_read_adc VDD_CORE_A VDD_CORE_V", result_buf, sizeof result_buf);
+    
+    // Fastest string extract (that I could get)
     const char *a_eq = memchr(result_buf, '=', strlen(result_buf));
     amps = strtod(a_eq + 1, NULL);
     const char *v_eq = memchr(a_eq ? a_eq + 1 : result_buf, '=', strlen(result_buf));
     volts = strtod(v_eq + 1, NULL);
+    
 	return amps*volts;
-
 }
 
 //https://github.com/raspberrypi/linux/blob/29653ef5475124316b9284adb6cbfc97e9cae48f/drivers/clk/bcm/clk-bcm2835.c#L1955-L1964
