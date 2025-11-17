@@ -3,9 +3,13 @@ CFLAGS:= -O3 -march=armv8-a+crypto -D_POSIX_SOURCE -D_GNU_SOURCE -falign-functio
 LIBS:= -lpthread -lrt -lm
 UTILS:= ../../util/util.o
 
-all: obj bin out data driver
+all: obj bin out data driver driver_aes
 
 driver: obj/driver.o $(UTILS)
+	$(CC) -o bin/$@ $^ $(LIBS)
+
+
+driver_aes: obj/driver_aes.o $(UTILS)
 	$(CC) -o bin/$@ $^ $(LIBS)
 
 obj/%.o: %.c

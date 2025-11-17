@@ -24,9 +24,9 @@ sudo rm -rf out
 mkdir out
 sudo rm -rf input.txt
 
-for selector in 0 1; do
+for selector in 0 1 2 3; do
 	echo $selector >> input.txt
 done
 
-sudo ./bin/driver ${num_thread} ${samples} ${outer}
+sudo ./bin/driver_aes ${num_thread} ${samples} ${outer}
 cp -r out data/${NAME}/aes-${date}
