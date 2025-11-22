@@ -16,7 +16,12 @@ import numpy as np
     # 0x55,0x66,0x77,0x88,0x90,0x10,0x20,0x30
 # };
 
-
+# static uint8_t master_key[16] = {
+    # 0x6e, 0x8f, 0xaf, 0xb2,
+    # 0x2d, 0x6b, 0x08, 0xd8,
+    # 0x8d, 0xae, 0xca, 0x2a,
+    # 0xf6, 0xce, 0xc8, 0x4c
+# };
 
 def parse_file(fn):
     energy = []
@@ -51,6 +56,36 @@ SBOX = [
     0x8c,0xa1,0x89,0x0d,0xbf,0xe6,0x42,0x68,0x41,0x99,0x2d,0x0f,0xb0,0x54,0xbb,0x16
     ]
     
+# count number of traces 
+def count_crossings(trace, thresh=2000):
+    t = np.array(trace)
+    above = t < thresh
+    return np.sum(above[1:] != above[:-1])
+
+# calculate how long we were in the high state    
+def avg_high_time(freq_trace, time_trace, high_thresh=2000):
+    f = np.array(freq_trace)
+    t = np.array(time_trace)
+
+    high = f >= high_thresh
+
+    times = []
+    start = None
+
+    for i in range(len(high)):
+        if high[i] and start is None:
+            start = t[i]
+        if not high[i] and start is not None:
+            times.append(t[i] - start)
+            start = None
+
+    if start is not None:
+        times.append(t[-1] - start)
+
+    if len(times) == 0:
+        return 0.0
+
+    return np.mean(times)
 def xtime(a):
     """ GF(2^8) multiply by x """
     return ((a << 1) ^ 0x1B) & 0xFF if (a & 0x80) else (a << 1)
@@ -182,8 +217,6 @@ def main():
     
     HW = [bin(x).count("1") for x in range(256)]
 
-
-
     min_len = min(len(v) for v in freqs.values())
     
     mean_freq = np.zeros((256, min_len))
@@ -221,10 +254,17 @@ def main():
     top10_keys   = best_indices[:10]
     top10_scores = best_scores[:10]
 
+    print("HW Correlation")
     for k in top10_keys:
         print(hex(k))
     print(top10_scores)
     num_p, num_tr = mean_freq.shape
+
+
+
+
+
+
 
     # predicted HW model for all key guesses (key x plaintext)
     p = np.arange(256, dtype=np.uint8)
@@ -253,8 +293,133 @@ def main():
     score2 = np.mean(np.abs(corr2), axis=1)
     best_keys_2nd = np.argsort(score2)[::-1][:10]
 
+    print("2nd order Correlation")
     for k in best_keys_2nd:
         print(hex(k), score2[k])
+
+
+
+
+
+
+    # HD model: transition p -> SBOX(p ⊕ k)
+    pred_hd = np.zeros((256, 256), dtype=float)
+    for k in range(256):
+        v = []
+        
+        for p in range(256):
+            v.append(HW[SBOX[p ^ k] ^ p])
+            
+        pred_hd[k] = v
+
+    # CPA with HD model
+    corr_hd = np.zeros((256, num_tr), dtype=float)
+
+    for t in range(num_tr):
+        L = mean_freq[:, t]
+        for k in range(256):
+            corr_hd[k, t] = np.corrcoef(pred_hd[k], L)[0, 1]
+
+    # aggregate and get best keys
+    score_hd = np.mean(np.abs(corr_hd), axis=1)
+    best_keys_hd = np.argsort(score_hd)[::-1][:10]
+
+    print("HD?")
+    for k in best_keys_hd:
+        print(hex(k), score_hd[k])
+        
+        
+    print("Crossing Counts")
+        
+    HW = [bin(x).count("1") for x in range(256)]
+
+    min_len = min(len(v) for v in freqs.values())
     
+    mean_freq = np.zeros((256, min_len))
+
+    for i in range(256):
+        traces = freqs[i][:min_len]
+        mean_freq[i] = [count_crossings(t, 1900) for t in traces]
+        
+    corr = np.zeros((256, mean_freq.shape[1]))
+
+    for k in range(256):
+        predicted = []
+            
+        for p in range(256):
+            predicted.append(HW[SBOX[p ^ k]])
+            
+        for t in range(mean_freq.shape[1]):
+            corr[k,t] = np.corrcoef(predicted, mean_freq[:,t])[0,1]
+            
+            
+    plt.imshow(corr, aspect='auto', cmap='viridis')
+    plt.colorbar(label='correlation')
+    plt.xlabel('trace index')
+    plt.ylabel('key guess (0-255)')
+    plt.show()
+    
+    # average correlation across all traces
+    score = np.mean(np.abs(corr), axis=1)        # shape (256,)
+
+    # get best guesses
+    best_indices = np.argsort(score)[::-1]   # descending order
+    best_scores  = score[best_indices]
+
+    # top-10 guesses
+    top10_keys   = best_indices[:10]
+    top10_scores = best_scores[:10]
+
+    for k in top10_keys:
+        print(hex(k))
+    print(top10_scores)
+    num_p, num_tr = mean_freq.shape
+      
+    print("AVG")
+        
+    HW = [bin(x).count("1") for x in range(256)]
+
+    min_len = min(len(v) for v in freqs.values())
+    
+    mean_freq = np.zeros((256, min_len))
+
+    for i in range(256):
+        traces = freqs[i][:min_len]
+        timer = times[i][:min_len]
+        mean_freq[i] = [avg_high_time(t,q, 1900) for t,q in zip(traces, timer)]
+        
+    corr = np.zeros((256, mean_freq.shape[1]))
+
+    for k in range(256):
+        predicted = []
+            
+        for p in range(256):
+            predicted.append(HW[SBOX[p ^ k]])
+            
+        for t in range(mean_freq.shape[1]):
+            corr[k,t] = np.corrcoef(predicted, mean_freq[:,t])[0,1]
+            
+            
+    plt.imshow(corr, aspect='auto', cmap='viridis')
+    plt.colorbar(label='correlation')
+    plt.xlabel('trace index')
+    plt.ylabel('key guess (0-255)')
+    plt.show()
+    
+    # average correlation across all traces
+    score = np.mean(np.abs(corr), axis=1)        # shape (256,)
+
+    # get best guesses
+    best_indices = np.argsort(score)[::-1]   # descending order
+    best_scores  = score[best_indices]
+
+    # top-10 guesses
+    top10_keys   = best_indices[:10]
+    top10_scores = best_scores[:10]
+
+    for k in top10_keys:
+        print(hex(k))
+    print(top10_scores)
+    num_p, num_tr = mean_freq.shape   
 if __name__ == "__main__":
     main()
