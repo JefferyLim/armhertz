@@ -1,13 +1,10 @@
 #!/usr/bin/env bash
 
-TOTAL_PHYSICAL_CORES=`grep '^core id' /proc/cpuinfo | sort -u | wc -l`
-TOTAL_LOGICAL_CORES=`grep '^core id' /proc/cpuinfo | wc -l`
-
-# Load MSR module
-sudo modprobe msr
+TOTAL_PHYSICAL_CORES=4
+TOTAL_LOGICAL_CORES=4
 
 # Setup
-samples=200000	# 200 seconds
+samples=8000 #200000	# 200 seconds
 outer=4
 date=`date +"%m%d-%H%M"`
 
@@ -62,6 +59,3 @@ echo 1 10 270 300 >> input.txt
 # Run
 sudo ./bin/driver ${samples} ${outer}
 cp -r out data/out-${date}
-
-# Unload MSR module
-sudo modprobe -r msr

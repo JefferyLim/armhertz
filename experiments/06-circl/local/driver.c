@@ -17,7 +17,7 @@
 #include <sys/resource.h>
 #include <pthread.h>
 #include <string.h>
-#include "../../util/util.h"
+#include "../../../util/util.h"
 
 volatile static int attacker_core_ID;
 
@@ -158,18 +158,20 @@ int main(int argc, char *argv[])
 		arg.bitindex = bitindex[i % num_selectors];
 		arg.number_thread = number_thread[i % num_selectors];
         
-        warmup();
+                warmup();
         
 		// Prepare for experiments
-		pthread_t thread1, thread2;
+		pthread_t thread1, thread2, thread3;
 
 		// Prepare background stress command
-		char command[256];
-		sprintf(command, "../circl/dh/sidh/POC_ATTACK/sike_local %d %d %d %d 1000000000", arg.flipkey, arg.keyindex, arg.bitindex, arg.number_thread);
+		char command[256], command1[256];
+		sprintf(command, "taskset -c 0-2 ../circl/dh/sidh/POC_ATTACK/sike_local %d %d %d %d 1000000000", arg.flipkey, arg.keyindex, arg.bitindex, arg.number_thread);
+		sprintf(command1, "taskset -c 3 stress-ng -q --cpu 3 -t 1y");
 		printf("Running: %s\n", command);
 
 		// Start LOCAL
 		pthread_create(&thread1, NULL, (void *)&victim, (void *)command);
+		pthread_create(&thread3, NULL, (void *)&victim, (void *)command1);
 
 		// Wait 35 seconds before starting the monitor
 		sleep(35);
@@ -182,6 +184,7 @@ int main(int argc, char *argv[])
 
 		// Stop stress
 		system("pkill -f sike_local");
+		system("pkill -f stress-ng");
 
 		// Join stress
 		pthread_join(thread1, NULL);
