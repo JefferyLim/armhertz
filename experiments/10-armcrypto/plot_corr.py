@@ -6,10 +6,16 @@ import glob
 import numpy as np
 
 ## KEY IS:
-    # static uint8_t master_key[16] = {
-        # 0xaa,0xbb,0xcc,0xdd,0x11,0x22,0x33,0x44,
-        # 0x55,0x66,0x77,0x88,0x90,0x10,0x20,0x30
-    # };
+# static uint8_t master_key[16] = {
+    # 0xaa,0xbb,0xcc,0xdd,0x11,0x22,0x33,0x44,
+    # 0x55,0x66,0x77,0x88,0x90,0x10,0x20,0x30
+# };
+
+# static uint8_t master_key[16] = {
+    # 0x25,0xbb,0xcc,0xdd,0x11,0x22,0x33,0x44,
+    # 0x55,0x66,0x77,0x88,0x90,0x10,0x20,0x30
+# };
+
 
 
 def parse_file(fn):
@@ -139,7 +145,6 @@ def main():
             energys[label_int] = []
             freqs[label_int] = []
             times[label_int] = []
-            
          # Append values for this file
         energys[label_int].append(energy)
         freqs[label_int].append(freq)
@@ -147,161 +152,109 @@ def main():
             
             
 
-    x = list(set(xlabels))
-    y = [np.mean(freqs[k]) for k in x]
+    # x = list(set(xlabels))
+    # y = [np.mean(freqs[k]) for k in x]
 
-    plt.figure(figsize=(3, 2))
-    plt.scatter(x, y, s=3)
-    plt.xlabel('COUNT')
-    plt.ylabel('Mean Frequency (GHz)')
-    # plt.legend(fontsize=7)
-    plt.tight_layout(pad=0.1)
-    plt.savefig("./plot/" + "freq.pdf", dpi=300)
-    plt.show()
-    plt.close()
+    # plt.figure(figsize=(3, 2))
+    # plt.scatter(x, y, s=3)
+    # plt.xlabel('COUNT')
+    # plt.ylabel('Mean Frequency (GHz)')
+    # # plt.legend(fontsize=7)
+    # plt.tight_layout(pad=0.1)
+    # plt.savefig("./plot/" + "freq.pdf", dpi=300)
+    # plt.show()
+    # plt.close()
 
 
-    x = list(set(xlabels))
-    y = [np.mean(energys[k]) for k in x]
+    # x = list(set(xlabels))
+    # y = [np.mean(energys[k]) for k in x]
     
     
-    plt.figure(figsize=(3, 2))
-    plt.scatter(x, y, s=3)
-    plt.xlabel('COUNT')
-    plt.ylabel('Mean Power (W)')
-    # plt.legend(fontsize=7)
-    plt.tight_layout(pad=0.1)
-    plt.savefig("./plot/" + "energy.pdf", dpi=300)
-    plt.show()
-    plt.close()
-
-
-    mean_freq = np.array([np.mean(freqs[p]) for p in range(256)])
-
+    # plt.figure(figsize=(3, 2))
+    # plt.scatter(x, y, s=3)
+    # plt.xlabel('COUNT')
+    # plt.ylabel('Mean Power (W)')
+    # # plt.legend(fontsize=7)
+    # plt.tight_layout(pad=0.1)
+    # plt.savefig("./plot/" + "energy.pdf", dpi=300)
+    # plt.show()
+    # plt.close()
+    
     HW = [bin(x).count("1") for x in range(256)]
 
-    corr_hw = np.zeros(256)
-    pred_HD = [[0]*256 for _ in range(256)]
 
-    for kguess in range(256):
-        # Prediction model: HW(SBOX[p ^ kguess])
-        predicted = np.array([HW[SBOX[p ^ kguess]] for p in range(256)])
 
-        # Pearson correlation
-        corr_hw[kguess] = np.corrcoef(predicted, mean_freq)[0, 1]
-
-    best_hw = np.argmax(np.abs(corr_hw))
-    print("HD best guess:", hex(best_hw), "corr =", corr_hw[best_hw])
-    plt.figure(figsize=(12,4))
-    plt.plot(np.abs(corr_hw))
-    plt.title("CPA Correlation for Key Guesses")
-    plt.xlabel("Key Guess (0-255)")
-    plt.ylabel("Correlation")
-    plt.grid(True)
-    plt.show()
+    min_len = min(len(v) for v in freqs.values())
     
-    # CORRELATION USING HD MODEL
-    corr_hd = np.zeros(256)
+    mean_freq = np.zeros((256, min_len))
 
-    for kguess in range(256):
-        pred_hd = []
+    for i in range(256):
+        traces = freqs[i][:min_len]
+        mean_freq[i] = [np.mean(t) for t in traces]
+        
+    corr = np.zeros((256, mean_freq.shape[1]))
+
+    for k in range(256):
+        predicted = []
+            
         for p in range(256):
-            prev = p ^ kguess
-            new  = SBOX[prev]
-            pred_hd.append(bin(prev ^ new).count("1"))   # HD
-        pred_hd = np.array(pred_hd)
-        corr_hd[kguess] = np.corrcoef(pred_hd, mean_freq)[0, 1]
-
-    best_hd = np.argmax(np.abs(corr_hd))
-    print("HD best guess:", hex(best_hd), "corr =", corr_hd[best_hd])
-
-    plt.figure(figsize=(12,4))
-    plt.plot(np.abs(corr_hd))
-    plt.title("Correlation (HD leakage model)")
-    plt.xlabel("Key Guess (0–255)")
-    plt.ylabel("|correlation|")
-    plt.grid(True)
+            predicted.append(HW[SBOX[p ^ k]])
+            
+        for t in range(mean_freq.shape[1]):
+            corr[k,t] = np.corrcoef(predicted, mean_freq[:,t])[0,1]
+            
+            
+    plt.imshow(corr, aspect='auto', cmap='viridis')
+    plt.colorbar(label='correlation')
+    plt.xlabel('trace index')
+    plt.ylabel('key guess (0-255)')
     plt.show()
     
-    # ---- TOP 10 GUESSES (HW model) ----
-    sorted_hw = np.argsort(np.abs(corr_hw))[::-1]   # sort descending by |corr|
-    top10_hw = sorted_hw[:10]
+    # average correlation across all traces
+    score = np.mean(np.abs(corr), axis=1)        # shape (256,)
 
-    print("\nTop 10 HW key guesses:")
-    for rank, k in enumerate(top10_hw, 1):
-        print(f"{rank:2d}. key = 0x{k:02X}, corr = {corr_hw[k]: .6f}")
+    # get best guesses
+    best_indices = np.argsort(score)[::-1]   # descending order
+    best_scores  = score[best_indices]
 
+    # top-10 guesses
+    top10_keys   = best_indices[:10]
+    top10_scores = best_scores[:10]
 
-    # ---- TOP 10 GUESSES (HD model) ----
-    sorted_hd = np.argsort(np.abs(corr_hd))[::-1]
-    top10_hd = sorted_hd[:10]
+    for k in top10_keys:
+        print(hex(k))
+    print(top10_scores)
+    num_p, num_tr = mean_freq.shape
 
-    print("\nTop 10 HD key guesses:")
-    for rank, k in enumerate(top10_hd, 1):
-        print(f"{rank:2d}. key = 0x{k:02X}, corr = {corr_hd[k]: .6f}")
-        
-    corr = np.zeros(256)
+    # predicted HW model for all key guesses (key x plaintext)
+    p = np.arange(256, dtype=np.uint8)
+    pred = np.zeros((256, 256), dtype=np.float64)
+    for k in range(256):
+        v = []
+            
+        for p in range(256):
+            v.append(HW[SBOX[p ^ k]])
+           
+        v = np.array(v)
+        pred[k] = v - v.mean()   # center model (optional but common)
 
-    for g in range(256):
-        pred = np.array([ predictor_AES_round(p, g) for p in range(256) ])
-        corr[g] = np.corrcoef(pred, mean_freq)[0,1]
-        
-        
-    # ---- TOP 10 GUESSES (HW model) ----
-    sorted_aes = np.argsort(np.abs(corr))[::-1]   # sort descending by |corr|
-    top10_aes = sorted_aes[:10]
-    
-    print("\nTop 10 AES Round key guesses:")
-    for rank, k in enumerate(top10_aes, 1):
-        print(f"{rank:2d}. key = 0x{k:02X}, corr = {corr[k]: .6f}")
-        
-    plt.figure(figsize=(12,4))
-    plt.plot(np.abs(corr))
-    plt.title("Correlation (HD leakage model)")
-    plt.xlabel("Key Guess (0–255)")
-    plt.ylabel("|correlation|")
-    plt.grid(True)
-    plt.show()
-    
-    
-    ##########################################
-    #        SECOND-ORDER CPA (HW Model)
-    ##########################################
+    # second-order leakage and CPA
+    corr2 = np.zeros((256, num_tr), dtype=np.float64)
 
-    # centered leakage
-    leak = mean_freq
-    leak_centered = leak - np.mean(leak)
-    leak2 = leak_centered**2   # second-order measurement
+    for t in range(num_tr):
+        L = mean_freq[:, t].astype(np.float64)
+        Lc = L - L.mean()
+        L2 = Lc * Lc            # second-order centered leakage
 
-    corr2 = np.zeros(256)
+        for k in range(256):
+            corr2[k, t] = np.corrcoef(pred[k], L2)[0, 1]
 
-    for g in range(256):
-        # first-order prediction
-        pred1 = np.array([HW[SBOX[p ^ g]] for p in range(256)])
-        pred1_centered = pred1 - np.mean(pred1)
+    # aggregate across traces (e.g., abs mean)
+    score2 = np.mean(np.abs(corr2), axis=1)
+    best_keys_2nd = np.argsort(score2)[::-1][:10]
 
-        # second-order predictor
-        pred2 = pred1_centered**2
-
-        # correlation
-        corr2[g] = np.corrcoef(pred2, leak2)[0, 1]
-
-
-    # ---- TOP 10 GUESSES (HW model) ----
-    sorted_aes = np.argsort(np.abs(corr2))[::-1]   # sort descending by |corr|
-    top10_aes = sorted_aes[:10]
-    
-    print("\nTop 10 2nd Order CPA guesses:")
-    for rank, k in enumerate(top10_aes, 1):
-        print(f"{rank:2d}. key = 0x{k:02X}, corr = {corr2[k]: .6f}")
-
-    plt.figure(figsize=(12,4))
-    plt.plot(np.abs(corr2))
-    plt.title("Second-Order CPA Correlation (HW model)")
-    plt.xlabel("Key Guess (0-255)")
-    plt.ylabel("|Correlation|")
-    plt.grid(True)
-    plt.show()
+    for k in best_keys_2nd:
+        print(hex(k), score2[k])
     
 if __name__ == "__main__":
     main()
