@@ -26,6 +26,7 @@ volatile static int attacker_core_ID = 0;
 #define TIME_BETWEEN_MEASUREMENTS 1000000L
 #define STACK_SIZE 8192
 
+
 struct args_t {
     uint64_t iters;
     int selector;
@@ -88,23 +89,14 @@ static void aes128_key_expand(const uint8_t key[16], uint8_t round_keys_raw[176]
 static __attribute__((noinline)) int victim(void *varg)
 {
     struct args_t *arg = (struct args_t *)varg;
-    int sel = arg->selector & 1;
-    int sel1 = arg->selector & 2;
 
-    static uint8_t block_zero[16] = {0};
-    static uint8_t block_rand[16] = {
-        0x3a,0x1f,0x92,0x7b, 0xcc,0xa2,0x58,0x11,
-        0x89,0x44,0x2b,0xd5, 0x77,0x30,0x6e,0xf9
+    static uint8_t block[16] = {0};
+    block[0] = (uint8_t)arg->selector;   // vary only byte 0
+    
+    static uint8_t master_key[16] = {
+        0xaa,0xbb,0xcc,0xdd,0x11,0x22,0x33,0x44,
+        0x55,0x66,0x77,0x88,0x90,0x10,0x20,0x30
     };
-
-    uint8_t *block = sel ? block_rand : block_zero;
-    uint8_t keyfill = sel1 ? 0x0 : 0xFF;
-
-    /* Example master key (replace with your key) */
-    static uint8_t master_key[16] = {0};
-    for(int i = 0 ; i < 16; i++){
-	master_key[i] = keyfill;
-    }
     
     static uint8_t round_keys_raw[176];
     static int keys_inited = 0;
@@ -121,21 +113,18 @@ static __attribute__((noinline)) int victim(void *varg)
     /* output buffer to prevent optimizing away */
     volatile uint8_t out[16];
 
+    volatile uint8x16_t state;
     /* Continuous workload: encrypt the SAME block repeatedly */
     for (;;) {
-        volatile uint8x16_t state = vld1q_u8(block);   // reload original block each iteration
+        state = vld1q_u8(block);   // reload original block each iteration
 
         /* Initial AddRoundKey */
         state = veorq_u8(state, rk[0]);
-
-        /* Rounds 1..9 */
-        for (int r = 1; r <= 9; ++r) {
-            state = vaeseq_u8(state, rk[r]);
-            state = vaesmcq_u8(state);
-        }
-
-        /* Final round (10) -- no MixColumns */
-        state = vaeseq_u8(state, rk[10]);
+        
+	state = vaeseq_u8(state, rk[1]);
+	state = vaesmcq_u8(state);
+	/* Final round (10) -- no MixColumns */
+	//state = vaeseq_u8(state, rk[]);
 
         vst1q_u8((uint8_t *)out, state); // write result out
     }
@@ -155,7 +144,7 @@ static __attribute__((noinline)) int monitor(void *in)
 
     char output_filename[128];
     snprintf(output_filename, sizeof(output_filename),
-             "./out/aes_%02d_%06d.out", arg->selector, rept_index);
+             "./out/leak_%02d_%06d.out", arg->selector, rept_index);
     rept_index++;
 
     // Prepare output file
@@ -229,7 +218,7 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    int selectors[128];
+    int selectors[512];
     int num_sel = 0;
 
     while (fscanf(sel_file, "%d", &selectors[num_sel]) == 1) {
@@ -246,11 +235,11 @@ int main(int argc, char *argv[])
                         MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
     for (int round = 0; round < outer * num_sel; round++) {
-	
-	warmup();
-
 
         arg.selector = selectors[round % num_sel];
+   	 
+	printf("%d\n", round);
+	warmup();
 
         int tids[ntasks];
         for (int t = 0; t < ntasks; t++) {
