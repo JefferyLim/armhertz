@@ -29,9 +29,14 @@ volatile static int attacker_core_ID = 0;
 
 struct args_t {
     uint64_t iters;
-    int selector;
+    char plaintext_hex[33];
 };
 
+static void hex_to_bytes(const char *hex, uint8_t out[16]) {
+    for (int i = 0; i < 16; i++) {
+        sscanf(hex + 2*i, "%2hhx", &out[i]);
+    }
+}
 
 /* AES-128 key expansion -> 176 bytes (11 * 16) */
 static const uint8_t sbox[256] = {
@@ -90,13 +95,16 @@ static __attribute__((noinline)) int victim(void *varg)
 {
     struct args_t *arg = (struct args_t *)varg;
 
-    static uint8_t block[16] = {0};
-    block[0] = (uint8_t)arg->selector;   // vary only byte 0
+    // holds the 16-byte plaintext
+    static uint8_t block[16];
+    // Convert the provided hex string into bytes
+    hex_to_bytes(arg->plaintext_hex, block);
     
     static uint8_t master_key[16] = {
-        0xaa,0xbb,0xcc,0xdd,0x11,0x22,0x33,0x44,
-        0x55,0x66,0x77,0x88,0x90,0x10,0x20,0x30
+        0x8c,0x51,0xef,0x1f,0x71,0xd7,0x45,0x29,
+        0xbd,0x51,0xd3,0xa9,0x2e,0x68,0x7e,0x20
     };
+    
     
     static uint8_t round_keys_raw[176];
     static int keys_inited = 0;
@@ -110,7 +118,7 @@ static __attribute__((noinline)) int victim(void *varg)
     for (int i = 0; i < 11; ++i)
         rk[i] = vld1q_u8(&round_keys_raw[i * 16]);
 
-    /* output buffer to prevent optimizing away */
+    /* aoutput buffer to prevent optimizing away */
     volatile uint8_t out[16];
 
     /* Continuous workload: encrypt the SAME block repeatedly */
@@ -147,7 +155,7 @@ static __attribute__((noinline)) int monitor(void *in)
 
     char output_filename[128];
     snprintf(output_filename, sizeof(output_filename),
-             "./out/leak_%02d_%06d.out", arg->selector, rept_index);
+             "./out/leak_%s_%06d.out", arg->plaintext_hex, rept_index);
     rept_index++;
 
     // Prepare output file
@@ -221,12 +229,13 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    int selectors[128];
+    char selectors[128][33];   // each plaintext hex string
     int num_sel = 0;
 
-    while (fscanf(sel_file, "%d", &selectors[num_sel]) == 1) {
+    while (fscanf(sel_file, "%32s", selectors[num_sel]) == 1) {
         num_sel++;
     }
+
     fclose(sel_file);
 
     setpriority(PRIO_PROCESS, 0, -20);
@@ -239,11 +248,14 @@ int main(int argc, char *argv[])
 
     for (int round = 0; round < outer * num_sel; round++) {
 
-        arg.selector = selectors[round % num_sel];
-   	 
-	printf("%d\n", round);
-	int a = warmup();
-	printf("%d\n", a);
+        strncpy(arg.plaintext_hex,
+        selectors[round % num_sel],
+        sizeof(arg.plaintext_hex));
+
+        arg.plaintext_hex[32] = '\0';
+         
+        printf("%d\n", round);
+        warmup();
 
         int tids[ntasks];
         for (int t = 0; t < ntasks; t++) {
