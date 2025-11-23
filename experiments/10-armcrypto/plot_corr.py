@@ -7,13 +7,10 @@ import numpy as np
 
 ## KEY IS:
 # static uint8_t master_key[16] = {
-    # 0xaa,0xbb,0xcc,0xdd,0x11,0x22,0x33,0x44,
-    # 0x55,0x66,0x77,0x88,0x90,0x10,0x20,0x30
-# };
-
-# static uint8_t master_key[16] = {
-    # 0x25,0xbb,0xcc,0xdd,0x11,0x22,0x33,0x44,
-    # 0x55,0x66,0x77,0x88,0x90,0x10,0x20,0x30
+    # 0xaa,0xbb,0xcc,0xdd,
+    # 0x11,0x22,0x33,0x44,
+    # 0x55,0x66,0x77,0x88,
+    # 0x90,0x10,0x20,0x30
 # };
 
 # static uint8_t master_key[16] = {
@@ -55,6 +52,15 @@ SBOX = [
     0xe1,0xf8,0x98,0x11,0x69,0xd9,0x8e,0x94,0x9b,0x1e,0x87,0xe9,0xce,0x55,0x28,0xdf,
     0x8c,0xa1,0x89,0x0d,0xbf,0xe6,0x42,0x68,0x41,0x99,0x2d,0x0f,0xb0,0x54,0xbb,0x16
     ]
+    
+SBox_inv = [None] * 256
+
+for i in range(256):
+    SBox_inv[SBOX[i]] = i
+
+# Reverse lookup for a given byte y
+def reverse_sbox_lookup(y):
+    return SBox_inv[y]
     
 # count number of traces 
 def count_crossings(trace, thresh=2000):
@@ -162,7 +168,6 @@ def main():
     #    ./out/all_%s_%04d.out
     all_files = sorted(glob.glob(in_dir + "/leak_*"), reverse=True)
     
-    
     energys = {}
     freqs = {}
     times = {}
@@ -185,8 +190,6 @@ def main():
         freqs[label_int].append(freq)
         times[label_int].append(time)
             
-            
-
     # x = list(set(xlabels))
     # y = [np.mean(freqs[k]) for k in x]
 
@@ -217,209 +220,130 @@ def main():
     
     HW = [bin(x).count("1") for x in range(256)]
 
+    # Loop over each correlation type
+    correlation_types = [
+        ('ALL', 'all', 'traces', None),
+        ('HW Correlation', 'mean_freq', 'traces', None),
+        ('2nd Order Correlation', 'mean_freq', 'traces', None),
+        ('HD Model Correlation', 'mean_freq', 'traces', None),
+        ('Crossing Count Correlation', 'mean_freq', 'crossings', None),
+        ('Average Time Correlation', 'mean_freq', 'times', None),
+        ('FFT Power Spectrum Correlation', 'power_spectrum', 'fft', 300),
+    ]
+
+    # Calculate the minimum length across all traces
     min_len = min(len(v) for v in freqs.values())
-    
+
+    # Initialize mean_freq array
     mean_freq = np.zeros((256, min_len))
 
-    for i in range(256):
-        traces = freqs[i][:min_len]
-        mean_freq[i] = [np.mean(t) for t in traces]
+    # Loop for each correlation type
+    for corr_type, corr_model, trace_type, param in correlation_types:
         
-    corr = np.zeros((256, mean_freq.shape[1]))
+        if corr_model == 'mean_freq':
+            # Compute mean frequency for each key guess
+            for i in range(256):
+                traces = freqs[i][:min_len]  # Align traces to min_len
+                if trace_type == 'traces':
+                    mean_freq[i] = [np.mean(t) for t in traces]  # average of traces
+                elif trace_type == 'crossings':
+                    mean_freq[i] = [count_crossings(t, 2000) for t in traces]  # count crossings
+                elif trace_type == 'times':
+                    timer = times[i][:min_len]
+                    mean_freq[i] = [avg_high_time(t, q, 1900) for t, q in zip(traces, timer)]  # average high time
 
-    for k in range(256):
-        predicted = []
-            
-        for p in range(256):
-            predicted.append(HW[SBOX[p ^ k]])
-            
-        for t in range(mean_freq.shape[1]):
-            corr[k,t] = np.corrcoef(predicted, mean_freq[:,t])[0,1]
-            
-            
-    plt.imshow(corr, aspect='auto', cmap='viridis')
-    plt.colorbar(label='correlation')
-    plt.xlabel('trace index')
-    plt.ylabel('key guess (0-255)')
-    plt.show()
-    
-    # average correlation across all traces
-    score = np.mean(np.abs(corr), axis=1)        # shape (256,)
+        elif corr_model == 'power_spectrum':
+            # Compute FFT power spectrum for each key guess
+            freq_bins = param  # In case FFT bins are passed
+            power_spectrum = np.zeros((256, freq_bins))
+            for i in range(256):
+                traces = np.array(freqs[i][:min_len])
+                fft_result = np.fft.fft(traces, axis=1)
+                power_spectrum[i] = np.abs(fft_result)[:, :freq_bins].mean(axis=0)
+        
+        
+        # Initialize correlation matrix
+        corr = np.zeros((256, mean_freq.shape[1])) if corr_model != 'power_spectrum' else np.zeros((256, power_spectrum.shape[1]))
+        
+        # Initialize the correlation matrix (256 plaintexts, 256 key guesses)
+        correlation_matrix = [[] for _ in range(256)]  # List of lists to store correlations for each key guess
 
-    # get best guesses
-    best_indices = np.argsort(score)[::-1]   # descending order
-    best_scores  = score[best_indices]
-
-    # top-10 guesses
-    top10_keys   = best_indices[:10]
-    top10_scores = best_scores[:10]
-
-    print("HW Correlation")
-    for k in top10_keys:
-        print(hex(k))
-    print(top10_scores)
-    num_p, num_tr = mean_freq.shape
-
-
-
-
-
-
-
-    # predicted HW model for all key guesses (key x plaintext)
-    p = np.arange(256, dtype=np.uint8)
-    pred = np.zeros((256, 256), dtype=np.float64)
-    for k in range(256):
-        v = []
-            
-        for p in range(256):
-            v.append(HW[SBOX[p ^ k]])
-           
-        v = np.array(v)
-        pred[k] = v - v.mean()   # center model (optional but common)
-
-    # second-order leakage and CPA
-    corr2 = np.zeros((256, num_tr), dtype=np.float64)
-
-    for t in range(num_tr):
-        L = mean_freq[:, t].astype(np.float64)
-        Lc = L - L.mean()
-        L2 = Lc * Lc            # second-order centered leakage
-
+        # Loop over all 256 possible key guesses (k)
         for k in range(256):
-            corr2[k, t] = np.corrcoef(pred[k], L2)[0, 1]
+            # Compute predicted Hamming weights for this key guess
+            predicted = [HW[SBOX[p ^ k]] for p in range(256)]  # predicted Hamming weights (length 256)
 
-    # aggregate across traces (e.g., abs mean)
-    score2 = np.mean(np.abs(corr2), axis=1)
-    best_keys_2nd = np.argsort(score2)[::-1][:10]
+            if corr_model == 'all':
+                for z in range(mean_freq.shape[1]):
+                    # Get the real measured data (ensure it's a 1D array of length T)
+                    sample_data = np.array([freqs[X][z] for X in range(256)]) # Assumes freqs[X] is a list of traces
+                    # Ensure the predicted data and sample data are 1D arrays of length 256
+                    predicted_data = np.array(predicted)  # predicted is already of length 256
 
-    print("2nd order Correlation")
-    for k in best_keys_2nd:
-        print(hex(k), score2[k])
+                    # Iterate over each time sample (assuming T time samples per trace)
+                    for t in range(sample_data.shape[0]):  # shape[0] gives the number of time samples (T)
+                        # Compute correlation between predicted data and the current time sample of sample_data
+                        correlation = np.corrcoef(predicted_data, sample_data[:,t])[0, 1]
+                        correlation_matrix[k].append(np.abs(correlation))
+                    
+                    corr[k, z] = max(correlation_matrix[k])
+                    
+            if corr_type == 'HW Correlation' or corr_type == 'Crossing Count Correlation' or corr_type == 'Average Time Correlation' :
+                # Calculate correlation for mean frequency model
+                for t in range(mean_freq.shape[1]):
+                    corr[k, t] = np.corrcoef(predicted, mean_freq[:, t])[0, 1]
+                    
+            elif corr_type == 'FFT Power Spectrum Correlation':
+                # Calculate correlation for FFT power spectrum model
+                for t in range(power_spectrum.shape[1]):
+                    observed_power = power_spectrum[:, t]
+                    corr[k, t] = np.corrcoef(predicted, observed_power)[0, 1]
+                    
+            elif corr_type == '2nd Order Correlation':
+                # Calculate correlation for second-order leakage model
+                for t in range(mean_freq.shape[1]):
+                    L = mean_freq[:, t].astype(np.float64)
+                    Lc = L - L.mean()
+                    L2 = Lc * Lc  # second-order centered leakage
+                    corr[k, t] = np.corrcoef(predicted, L2)[0, 1]
 
-
-
-
-
-
-    # HD model: transition p -> SBOX(p ⊕ k)
-    pred_hd = np.zeros((256, 256), dtype=float)
-    for k in range(256):
-        v = []
-        
-        for p in range(256):
-            v.append(HW[SBOX[p ^ k] ^ p])
+            elif corr_type == 'HD Model Correlation':
+                # Calculate correlation for HD model: transition p -> SBOX(p ⊕ k)
+                pred_hd = [HW[SBOX[p ^ k] ^ p] for p in range(256)]
+                for t in range(mean_freq.shape[1]):
+                    corr[k, t] = np.corrcoef(pred_hd, mean_freq[:, t])[0, 1]
+                
             
-        pred_hd[k] = v
+        # Plot the correlation results
+        plt.imshow(np.abs(corr), aspect='auto', cmap='viridis', origin='lower')
+        plt.colorbar(label='Correlation')
+        plt.xlabel('Trace Index' if corr_model != 'power_spectrum' else 'Frequency Bin (0-99)')
+        plt.ylabel('Key Guess (0-255)')
+        plt.title(corr_type)
+        plt.grid(True, which='both', axis='x', color='black', linestyle='-', linewidth=2)
+        #plt.show()
 
-    # CPA with HD model
-    corr_hd = np.zeros((256, num_tr), dtype=float)
+        score = np.max(np.abs(corr), axis=1)
 
-    for t in range(num_tr):
-        L = mean_freq[:, t]
-        for k in range(256):
-            corr_hd[k, t] = np.corrcoef(pred_hd[k], L)[0, 1]
+        # Get best guesses (descending order)
+        best_indices = np.argsort(score)[::-1]  
+        best_scores = score[best_indices]
 
-    # aggregate and get best keys
-    score_hd = np.mean(np.abs(corr_hd), axis=1)
-    best_keys_hd = np.argsort(score_hd)[::-1][:10]
+        # Top-10 guesses
+        top10_keys = best_indices[:10]
+        top10_scores = best_scores[:10]
 
-    print("HD?")
-    for k in best_keys_hd:
-        print(hex(k), score_hd[k])
+        # Print the best guesses and their scores
+        print(f"{corr_type}")
+        for k in top10_keys:
+            print(hex(k))
+        
+        print(top10_scores)
         
         
-    print("Crossing Counts")
-        
-    HW = [bin(x).count("1") for x in range(256)]
-
-    min_len = min(len(v) for v in freqs.values())
+    tmp = SBOX[0xca]
+    print(tmp)
     
-    mean_freq = np.zeros((256, min_len))
-
-    for i in range(256):
-        traces = freqs[i][:min_len]
-        mean_freq[i] = [count_crossings(t, 1900) for t in traces]
-        
-    corr = np.zeros((256, mean_freq.shape[1]))
-
-    for k in range(256):
-        predicted = []
-            
-        for p in range(256):
-            predicted.append(HW[SBOX[p ^ k]])
-            
-        for t in range(mean_freq.shape[1]):
-            corr[k,t] = np.corrcoef(predicted, mean_freq[:,t])[0,1]
-            
-            
-    plt.imshow(corr, aspect='auto', cmap='viridis')
-    plt.colorbar(label='correlation')
-    plt.xlabel('trace index')
-    plt.ylabel('key guess (0-255)')
-    plt.show()
     
-    # average correlation across all traces
-    score = np.mean(np.abs(corr), axis=1)        # shape (256,)
-
-    # get best guesses
-    best_indices = np.argsort(score)[::-1]   # descending order
-    best_scores  = score[best_indices]
-
-    # top-10 guesses
-    top10_keys   = best_indices[:10]
-    top10_scores = best_scores[:10]
-
-    for k in top10_keys:
-        print(hex(k))
-    print(top10_scores)
-    num_p, num_tr = mean_freq.shape
-      
-    print("AVG")
-        
-    HW = [bin(x).count("1") for x in range(256)]
-
-    min_len = min(len(v) for v in freqs.values())
-    
-    mean_freq = np.zeros((256, min_len))
-
-    for i in range(256):
-        traces = freqs[i][:min_len]
-        timer = times[i][:min_len]
-        mean_freq[i] = [avg_high_time(t,q, 1900) for t,q in zip(traces, timer)]
-        
-    corr = np.zeros((256, mean_freq.shape[1]))
-
-    for k in range(256):
-        predicted = []
-            
-        for p in range(256):
-            predicted.append(HW[SBOX[p ^ k]])
-            
-        for t in range(mean_freq.shape[1]):
-            corr[k,t] = np.corrcoef(predicted, mean_freq[:,t])[0,1]
-            
-            
-    plt.imshow(corr, aspect='auto', cmap='viridis')
-    plt.colorbar(label='correlation')
-    plt.xlabel('trace index')
-    plt.ylabel('key guess (0-255)')
-    plt.show()
-    
-    # average correlation across all traces
-    score = np.mean(np.abs(corr), axis=1)        # shape (256,)
-
-    # get best guesses
-    best_indices = np.argsort(score)[::-1]   # descending order
-    best_scores  = score[best_indices]
-
-    # top-10 guesses
-    top10_keys   = best_indices[:10]
-    top10_scores = best_scores[:10]
-
-    for k in top10_keys:
-        print(hex(k))
-    print(top10_scores)
-    num_p, num_tr = mean_freq.shape   
 if __name__ == "__main__":
     main()
