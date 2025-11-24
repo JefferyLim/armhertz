@@ -26,6 +26,7 @@ volatile static int attacker_core_ID = 0;
 #define TIME_BETWEEN_MEASUREMENTS 1000000L
 #define STACK_SIZE 8192
 
+#define BYTEBLOCK 0
 
 struct args_t {
     uint64_t iters;
@@ -91,11 +92,13 @@ static __attribute__((noinline)) int victim(void *varg)
     struct args_t *arg = (struct args_t *)varg;
 
     static uint8_t block[16] = {0};
-    block[0] = (uint8_t)arg->selector;   // vary only byte 0
+    block[BYTEBLOCK] = (uint8_t)arg->selector;   // vary only byte 0
     
     static uint8_t master_key[16] = {
-        0xaa,0xbb,0xcc,0xdd,0x11,0x22,0x33,0x44,
-        0x55,0x66,0x77,0x88,0x90,0x10,0x20,0x30
+        0xce, 0x38, 0x92, 0xc5,
+        0xee, 0x51, 0x5d, 0xa8,
+        0x1b, 0x71, 0x68, 0x5f,
+        0x56, 0x65, 0xbf, 01c
     };
     
     static uint8_t round_keys_raw[176];
@@ -121,10 +124,10 @@ static __attribute__((noinline)) int victim(void *varg)
         /* Initial AddRoundKey */
         state = veorq_u8(state, rk[0]);
         
-	state = vaeseq_u8(state, rk[1]);
-	state = vaesmcq_u8(state);
-	/* Final round (10) -- no MixColumns */
-	//state = vaeseq_u8(state, rk[]);
+        state = vaeseq_u8(state, rk[1]);
+        state = vaesmcq_u8(state);
+        /* Final round (10) -- no MixColumns */
+        //state = vaeseq_u8(state, rk[]);
 
         vst1q_u8((uint8_t *)out, state); // write result out
     }
@@ -172,7 +175,7 @@ static __attribute__((noinline)) int monitor(void *in)
 		start_vc = read_cntvct_el0();
 
 	        // Adds about 0.014 seconds
-		energy = read_power(mb); // adds around 0.00374 seconds on average
+		energy = 0.0;//read_power(mb); // adds around 0.00374 seconds on average
         	//double hz = read_hz(mb); // adds 0.011 seconds
 	        time += (double)(start_vc - prev_vc)/(double) cntfrq;
 		double hz = (double)(start_cc - prev_cc)/((double)(start_vc - prev_vc)/(double) cntfrq);

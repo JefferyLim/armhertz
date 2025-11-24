@@ -6,11 +6,14 @@ LIBS := -lpthread -lrt -lm
 # Updated util library
 UTILS := ../../util/util.o
 
+AES_DEFINES ?=
+
 all: obj bin out data driver_aes_leak driver driver_aes
 
 driver_aes_leak: obj/driver_aes_leak.o $(UTILS)
 	$(CC) -o bin/$@ $^ $(LIBS)
-
+    
+driver_aes: CFLAGS += $(AES_DEFINES)
 driver_aes: obj/driver_aes.o $(UTILS)
 	$(CC) -o bin/$@ $^ $(LIBS)
 
