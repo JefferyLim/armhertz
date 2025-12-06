@@ -15,7 +15,15 @@
 #include <time.h>
 #include <signal.h>
 #include <math.h>
+#include <stdint.h>
+#include <string.h>
 
+void string_to_uint8_array(const char *str, uint8_t *array) {
+    size_t length = strlen(str);  // Get the length of the string
+    for (size_t i = 0; i < length; i++) {
+        array[i] = (uint8_t)str[i];  // Convert each character to uint8_t and store it in the array
+    }
+}
 #include <arm_neon.h>
 #include <arm_acle.h>
 
@@ -29,7 +37,7 @@ volatile static int attacker_core_ID = 0;
 
 struct args_t {
     uint64_t iters;
-    char plaintext_hex[33];
+    int selector;
 };
 
 static void hex_to_bytes(const char *hex, uint8_t out[16]) {
@@ -98,13 +106,121 @@ static __attribute__((noinline)) int victim(void *varg)
     // holds the 16-byte plaintext
     static uint8_t block[16];
     // Convert the provided hex string into bytes
-    hex_to_bytes(arg->plaintext_hex, block);
+    static uint8_t master_key[16] = {0};
+
+char *stringkey = NULL;
+char *stringbyte = NULL;
+switch (arg->selector) {
+    case 0:
+        stringkey = "00000000000000000000000000000000";  // All 0's
+        stringbyte = "00000000000000000000000000000000"; // All 0's
+        break;
+    case 1:
+        stringkey = "00000000000000000000000000000000";  // All 0's
+        stringbyte = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"; // All F's
+        break;
+    case 2:
+        stringkey = "00000000000000000000000000000000";  // All 0's
+        stringbyte = "FFFFFFFFFFFFFFFF0000000000000000"; // Upper half F's
+        break;
+    case 3:
+        stringkey = "00000000000000000000000000000000";  // All 0's
+        stringbyte = "0000000000000000FFFFFFFFFFFFFFFF"; // Lower half F's
+        break;
+    case 4:
+        stringkey = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF";  // All F's
+        stringbyte = "00000000000000000000000000000000"; // All 0's
+        break;
+    case 5:
+        stringkey = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF";  // All F's
+        stringbyte = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"; // All F's
+        break;
+    case 6:
+        stringkey = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF";  // All F's
+        stringbyte = "FFFFFFFFFFFFFFFF0000000000000000"; // Upper half F's
+        break;
+    case 7:
+        stringkey = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF";  // All F's
+        stringbyte = "0000000000000000FFFFFFFFFFFFFFFF"; // Lower half F's
+        break;
+    case 8:
+        stringkey = "FFFFFFFFFFFFFFFF0000000000000000";  // Upper half F's
+        stringbyte = "00000000000000000000000000000000"; // All 0's
+        break;
+    case 9:
+        stringkey = "FFFFFFFFFFFFFFFF0000000000000000";  // Upper half F's
+        stringbyte = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"; // All F's
+        break;
+    case 10:
+        stringkey = "FFFFFFFFFFFFFFFF0000000000000000";  // Upper half F's
+        stringbyte = "FFFFFFFFFFFFFFFF0000000000000000"; // Upper half F's
+        break;
+    case 11:
+        stringkey = "FFFFFFFFFFFFFFFF0000000000000000";  // Upper half F's
+        stringbyte = "0000000000000000FFFFFFFFFFFFFFFF"; // Lower half F's
+        break;
+    case 12:
+        stringkey = "0000000000000000FFFFFFFFFFFFFFFF";  // Lower half F's
+        stringbyte = "00000000000000000000000000000000"; // All 0's
+        break;
+    case 13:
+        stringkey = "0000000000000000FFFFFFFFFFFFFFFF";  // Lower half F's
+        stringbyte = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"; // All F's
+        break;
+    case 14:
+        stringkey = "0000000000000000FFFFFFFFFFFFFFFF";  // Lower half F's
+        stringbyte = "FFFFFFFFFFFFFFFF0000000000000000"; // Upper half F's
+        break;
+    case 15:
+        stringkey = "0000000000000000FFFFFFFFFFFFFFFF";  // Lower half F's
+        stringbyte = "0000000000000000FFFFFFFFFFFFFFFF"; // Lower half F's
+        break;
+    case 16:
+        stringkey = "4A8E19FABCFF583FF6A203DC68901F78";  // Random 128-bit 1
+        stringbyte = "00000000000000000000000000000000"; // All 0's
+        break;
+    case 17:
+        stringkey = "4A8E19FABCFF583FF6A203DC68901F78";  // Random 128-bit 1
+        stringbyte = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"; // All F's
+        break;
+    case 18:
+        stringkey = "4A8E19FABCFF583FF6A203DC68901F78";  // Random 128-bit 1
+        stringbyte = "FFFFFFFFFFFFFFFF0000000000000000"; // Upper half F's
+        break;
+    case 19:
+        stringkey = "4A8E19FABCFF583FF6A203DC68901F78";  // Random 128-bit 1
+        stringbyte = "0000000000000000FFFFFFFFFFFFFFFF"; // Lower half F's
+        break;
+    case 20:
+        stringkey = "1C4D1F2B3A4C6F2B0E4D8DB6B832A9C1";  // Random 128-bit 2
+        stringbyte = "00000000000000000000000000000000"; // All 0's
+        break;
+    case 21:
+        stringkey = "1C4D1F2B3A4C6F2B0E4D8DB6B832A9C1";  // Random 128-bit 2
+        stringbyte = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"; // All F's
+        break;
+    case 22:
+        stringkey = "1C4D1F2B3A4C6F2B0E4D8DB6B832A9C1";  // Random 128-bit 2
+        stringbyte = "FFFFFFFFFFFFFFFF0000000000000000"; // Upper half F's
+        break;
+    case 23:
+        stringkey = "1C4D1F2B3A4C6F2B0E4D8DB6B832A9C1";  // Random 128-bit 2
+        stringbyte = "0000000000000000FFFFFFFFFFFFFFFF"; // Lower half F's
+        break;
+    default:
+        // Handle any invalid selector
+        break;
+}
+
+        string_to_uint8_array(stringkey, master_key);
+        string_to_uint8_array(stringbyte, block);
     
-    static uint8_t master_key[16] = {
-        0x8c,0x51,0xef,0x1f,0x71,0xd7,0x45,0x29,
-        0xbd,0x51,0xd3,0xa9,0x2e,0x68,0x7e,0x20
-    };
-    
+
+
+
+
+
+
     
     static uint8_t round_keys_raw[176];
     static int keys_inited = 0;
@@ -155,7 +271,7 @@ static __attribute__((noinline)) int monitor(void *in)
 
     char output_filename[128];
     snprintf(output_filename, sizeof(output_filename),
-             "./out/leak_%s_%06d.out", arg->plaintext_hex, rept_index);
+             "./out/leak_%d_%06d.out", arg->selector, rept_index);
     rept_index++;
 
     // Prepare output file
@@ -183,7 +299,7 @@ static __attribute__((noinline)) int monitor(void *in)
 		start_vc = read_cntvct_el0();
 
 	        // Adds about 0.014 seconds
-		energy = read_power(mb); // adds around 0.00374 seconds on average
+		energy = 0.0; //read_power(mb); // adds around 0.00374 seconds on average
         	//double hz = read_hz(mb); // adds 0.011 seconds
 	        time += (double)(start_vc - prev_vc)/(double) cntfrq;
 		double hz = (double)(start_cc - prev_cc)/((double)(start_vc - prev_vc)/(double) cntfrq);
@@ -229,12 +345,22 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    char selectors[128][33];   // each plaintext hex string
-    int num_sel = 0;
+	// Read the selectors file line by line
+	int num_sel = 0;
+	int selectors[1024];
+	size_t len = 0;
+	ssize_t read = 0;
+	char *line = NULL;
+	while ((read = getline(&line, &len, sel_file)) != -1) {
+		if (line[read - 1] == '\n')
+			line[--read] = '\0';
 
-    while (fscanf(sel_file, "%32s", selectors[num_sel]) == 1) {
-        num_sel++;
-    }
+		// Read selector
+		sscanf(line, "%d", &(selectors[num_sel]));
+		num_sel += 1;
+	}
+
+
 
     fclose(sel_file);
 
@@ -248,12 +374,10 @@ int main(int argc, char *argv[])
 
     for (int round = 0; round < outer * num_sel; round++) {
 
-        strncpy(arg.plaintext_hex,
-        selectors[round % num_sel],
-        sizeof(arg.plaintext_hex));
 
-        arg.plaintext_hex[32] = '\0';
-         
+	// Set alternating selector
+	arg.selector = selectors[round % num_sel];
+        sleep(5); 
         printf("%d\n", round);
         warmup();
 

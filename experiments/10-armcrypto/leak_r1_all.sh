@@ -35,7 +35,7 @@ for BYTEBLOCK in `seq 0 15`; do
     
     # Rebuild only the driver_aes target
     make clean > /dev/null
-    make driver_aes AES_DEFINES="-DBYTEBLOCK=${BYTEBLOCK}"
+    make AES_DEFINES="${BYTEBLOCK}"
 
     echo ">>> Running driver_aes BYTEBLOCK=${BYTEBLOCK}"
     sudo ./bin/driver_aes ${num_thread} ${samples} ${outer}

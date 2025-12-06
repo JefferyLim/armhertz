@@ -8,8 +8,8 @@ TOTAL_PHYSICAL_CORES=4
 TOTAL_LOGICAL_CORES=4
 
 # Setup
-samples=5000	    # 30 seconds (1 ms + 14 ms )
-outer=10			# 30 reps
+samples=2000	    # 30 seconds (1 ms + 14 ms )
+outer=20			# 30 reps
 num_thread=$TOTAL_LOGICAL_CORES
 date=`date +"%m%d-%H%M"`
 
